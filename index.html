@@ -107,6 +107,18 @@
   }
   .tab.active { color: var(--gold-light); border-bottom-color: var(--gold); background: rgba(232,160,32,0.08); }
   .tab-icon { display:block; font-size:18px; margin-bottom:2px; }
+  .tab-wrapper { position:relative; display:inline-block; }
+  .tab-badge {
+    display:none;
+    position:absolute; top:-4px; right:-8px;
+    background:var(--red); color:#fff;
+    font-size:9px; font-weight:900;
+    min-width:16px; height:16px;
+    border-radius:20px; padding:0 4px;
+    line-height:16px; text-align:center;
+    border:2px solid var(--ink);
+  }
+  .tab-badge.visible { display:block; }
 
   .screen { display:none; position:relative; z-index:5; padding:14px; padding-bottom:30px; }
   .screen.active { display:block; }
@@ -425,7 +437,7 @@
     <span class="tab-icon">🏪</span>仲買
   </button>
   <button class="tab" onclick="switchTab('board')" id="tab-board">
-    <span class="tab-icon">📋</span>掲示板
+    <span class="tab-wrapper"><span class="tab-icon">📋</span><span class="tab-badge" id="board-tab-badge"></span></span>掲示板
   </button>
 </div>
 
@@ -710,7 +722,10 @@ window.switchTab = function(tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('screen-' + tab).classList.add('active');
   document.getElementById('tab-'    + tab).classList.add('active');
-  if (tab === 'board') renderMessages(false);
+  if (tab === 'board') {
+    renderMessages(false);
+    document.getElementById('board-tab-badge').classList.remove('visible');
+  }
 };
 // ── パスワード関連 ─────────────────────────
 onValue(ref(db, 'buyerPassword'), snapshot => {
@@ -911,6 +926,15 @@ function renderMessages(isBuyer) {
   document.getElementById('board-msg-list').innerHTML  = html;
   document.getElementById('fisher-msg-count').textContent = count + '件';
   document.getElementById('board-msg-count').textContent  = count + '件';
+  // 掲示板タブのバッジ更新
+  const badge = document.getElementById('board-tab-badge');
+  const isBoard = document.getElementById('screen-board').classList.contains('active');
+  if (count > 0 && !isBoard) {
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.classList.add('visible');
+  } else {
+    badge.classList.remove('visible');
+  }
 }
 
 // ── 仲買画面 ───────────────────────────────
