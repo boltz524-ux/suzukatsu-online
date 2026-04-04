@@ -578,6 +578,17 @@
     </div>
   </div>
 
+  <div class="msg-board">
+    <div class="msg-board-header">
+      <span style="font-size:20px;">📢</span>
+      <div class="msg-board-title">送信済みメッセージ（いいね確認）</div>
+      <span class="msg-board-badge" id="buyer-msg-count">0件</span>
+    </div>
+    <div class="msg-list" id="buyer-msg-list">
+      <div class="msg-empty">まだメッセージはありません</div>
+    </div>
+  </div>
+
   <!-- パスワード変更 -->
   <div class="card" style="margin-top:14px;">
     <div class="card-title">🔐 パスワード変更</div>
@@ -1112,6 +1123,29 @@ function renderBuyer() {
   }).join('');
 
   renderMessages(true);
+
+  // 仲買タブのメッセージ一覧（いいね確認用）
+  const sortedMsgs = [...messages].sort((a,b) => b.sentAt - a.sentAt);
+  const buyerMsgCount = sortedMsgs.length;
+  document.getElementById('buyer-msg-count').textContent = buyerMsgCount + '件';
+  document.getElementById('buyer-msg-list').innerHTML = buyerMsgCount === 0
+    ? '<div class="msg-empty">まだメッセージはありません</div>'
+    : sortedMsgs.map(m => {
+        const likes = m.likes || {};
+        const likeNames = Object.values(likes);
+        const likeCount = likeNames.length;
+        return `
+          <div class="msg-item">
+            <div class="msg-text">${esc(m.text)}</div>
+            <div class="msg-meta">🏪 仲買より　${fmtFull(m.sentAt)}（${fmtTime(m.sentAt)}）</div>
+            <button class="msg-delete-btn" onclick="deleteMsg(${m.id})">削除</button>
+            ${likeCount > 0
+              ? `<div class="like-names-buyer" style="margin-top:8px;">👍 ${likeNames.map(n => esc(n)).join('　')}</div>`
+              : `<div style="font-size:11px;color:rgba(232,244,248,0.25);margin-top:8px;">まだいいねなし</div>`
+            }
+          </div>
+        `;
+      }).join('');
 }
 
 // ── リセット ───────────────────────────────
