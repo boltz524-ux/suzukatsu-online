@@ -24,8 +24,9 @@
     margin-bottom: 20px;
   }
   .hero-icon { font-size: 44px; display: block; margin-bottom: 8px; }
-  .hero-title { font-size: 22px; font-weight: 900; color: #ffd166; }
+  .hero-title { font-size: 22px; font-weight: 900; color: #ffd166; letter-spacing: 0.05em; }
   .hero-sub { font-size: 12px; color: rgba(232,244,248,0.6); margin-top: 6px; }
+
   .url-box {
     background: rgba(232,160,32,0.12);
     border: 1px solid rgba(232,160,32,0.4);
@@ -34,12 +35,14 @@
     margin-bottom: 20px;
     text-align: center;
   }
-  .url-label { font-size: 10px; font-weight: 700; color: rgba(232,244,248,0.5); margin-bottom: 5px; }
+  .url-label { font-size: 10px; font-weight: 700; color: rgba(232,244,248,0.5); letter-spacing: 0.1em; margin-bottom: 5px; }
   .url-text { font-size: 14px; font-weight: 700; color: #ffd166; word-break: break-all; }
+
   .section-title {
     font-size: 11px; font-weight: 700;
     color: rgba(232,244,248,0.45);
     letter-spacing: 0.12em;
+    text-transform: uppercase;
     margin-bottom: 10px;
     padding-left: 4px;
   }
@@ -50,10 +53,14 @@
     padding: 16px;
     margin-bottom: 12px;
   }
-  .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .card-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px;
+  }
   .card-icon { font-size: 24px; }
   .card-title { font-size: 15px; font-weight: 900; }
   .card-sub { font-size: 11px; color: rgba(232,244,248,0.5); margin-top: 1px; }
+
   .step-list { display: flex; flex-direction: column; gap: 8px; }
   .step {
     display: flex; align-items: flex-start; gap: 10px;
@@ -63,6 +70,10 @@
     border-left: 3px solid #005f8a;
   }
   .step.stock { border-left-color: #4ade80; }
+  .step.buyer { border-left-color: #a478e8; }
+  .step.open  { border-left-color: #5dcc8a; }
+  .step.close { border-left-color: #ff8888; }
+
   .step-num {
     font-size: 11px; font-weight: 900;
     background: #005f8a; color: #fff;
@@ -72,22 +83,94 @@
     flex-shrink: 0; margin-top: 1px;
   }
   .step.stock .step-num { background: #4ade80; color: #0f1923; }
+  .step.buyer .step-num { background: #a478e8; }
+  .step.open  .step-num { background: #5dcc8a; color: #0f1923; }
+  .step.close .step-num { background: #ff8888; color: #0f1923; }
+
   .step-text { font-size: 13px; line-height: 1.6; }
   .step-text strong { color: #ffd166; }
   .step.stock .step-text strong { color: #4ade80; }
+  .step.buyer .step-text strong { color: #a478e8; }
+  .step.open  .step-text strong { color: #5dcc8a; }
+  .step.close .step-text strong { color: #ff8888; }
+
+  .status-sample {
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .status-sample.open  { background: rgba(26,122,74,0.3); color: #5dcc8a; border: 1px solid rgba(26,122,74,0.3); }
+  .status-sample.close { background: rgba(192,57,43,0.22); color: #ff8888; border: 1px solid rgba(192,57,43,0.2); }
+  .status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.open  { background: #5dcc8a; }
+  .status-dot.close { background: #ff8888; }
+
+  .buyer-card {
+    background: rgba(108,61,181,0.12);
+    border: 1px solid rgba(164,120,232,0.3);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .buyer-title { font-size: 15px; font-weight: 900; color: #a478e8; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+
+  .tip-box {
+    background: rgba(26,122,74,0.12);
+    border: 1px solid rgba(26,122,74,0.3);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    line-height: 1.8;
+    color: rgba(232,244,248,0.8);
+  }
+  .tip-box strong { color: #5dcc8a; }
+
+  .note {
+    font-size: 11px;
+    color: rgba(232,244,248,0.35);
+    text-align: center;
+    margin-top: 16px;
+    line-height: 1.7;
+  }
 </style>
 </head>
 <body>
+
 <div class="hero">
   <span class="hero-icon">🐟</span>
   <div class="hero-title">すずかつオンライン</div>
   <div class="hero-sub">漁師 ↔ 仲買　リアルタイム連絡システム</div>
 </div>
+
 <div class="url-box">
   <div class="url-label">🌐 アクセスURL</div>
   <div class="url-text">https://chipper-otter-371c6f.netlify.app</div>
 </div>
+
+<!-- オープン状況 -->
+<div class="section-title">🟢 オープン状況（全員共通）</div>
+<div class="card">
+  <div class="card-header">
+    <span class="card-icon">📊</span>
+    <div>
+      <div class="card-title">画面上部に常時表示</div>
+      <div class="card-sub">仲買が切り替えると全員に即時反映</div>
+    </div>
+  </div>
+  <div class="status-sample open">
+    <div class="status-dot open"></div>🏪 現在　開店中
+  </div>
+  <div class="status-sample close">
+    <div class="status-dot close"></div>🔒 現在　閉店中
+  </div>
+</div>
+
+<!-- 漁師向け -->
 <div class="section-title">🎣 漁師の方へ</div>
+
 <div class="card">
   <div class="card-header">
     <span class="card-icon">1️⃣</span>
@@ -101,6 +184,7 @@
     <div class="step"><div class="step-num">2</div><div class="step-text"><strong>名前欄</strong>に自分の名前を入力する</div></div>
   </div>
 </div>
+
 <div class="card">
   <div class="card-header">
     <span class="card-icon">2️⃣</span>
@@ -115,6 +199,7 @@
     <div class="step"><div class="step-num">🏠</div><div class="step-text"><strong>今日は終わり・帰宅</strong>　→　帰るとき</div></div>
   </div>
 </div>
+
 <div class="card">
   <div class="card-header">
     <span class="card-icon">3️⃣</span>
@@ -129,31 +214,32 @@
     <div class="step stock"><div class="step-num">3</div><div class="step-text">「<strong>💾 在庫情報を保存</strong>」を押す</div></div>
   </div>
 </div>
+
+<!-- 仲買向け -->
 <div class="section-title" style="margin-top:8px;">🏪 仲買の方へ</div>
-<div class="card" style="background:rgba(108,61,181,0.12);border-color:rgba(164,120,232,0.3);">
-  <div class="card-header">
-    <span class="card-icon">📊</span>
-    <div>
-      <div class="card-title" style="color:#a478e8;">仲買タブでできること</div>
-    </div>
-  </div>
+
+<div class="buyer-card">
+  <div class="buyer-title"><span>📊</span>仲買タブでできること</div>
   <div class="step-list">
-    <div class="step" style="border-left-color:#a478e8;"><div class="step-num" style="background:#a478e8;">▶</div><div class="step-text">漁師全員の状況を<strong style="color:#a478e8;">リアルタイム</strong>で確認</div></div>
-    <div class="step" style="border-left-color:#a478e8;"><div class="step-num" style="background:#a478e8;">▶</div><div class="step-text">「開店すべきか」を自動で判断して表示</div></div>
-    <div class="step" style="border-left-color:#a478e8;"><div class="step-num" style="background:#a478e8;">▶</div><div class="step-text">漁師全員へ<strong style="color:#a478e8;">お知らせを送信</strong>できる</div></div>
+    <div class="step open"><div class="step-num">🟢</div><div class="step-text">「<strong>開店する</strong>」を押すと全員に開店中が表示される</div></div>
+    <div class="step close"><div class="step-num">🔴</div><div class="step-text">「<strong>閉店する</strong>」を押すと全員に閉店中が表示される</div></div>
+    <div class="step buyer"><div class="step-num">▶</div><div class="step-text">漁師全員の状況を<strong>リアルタイム</strong>で確認できる</div></div>
+    <div class="step buyer"><div class="step-num">▶</div><div class="step-text">漁師全員へ<strong>お知らせを送信</strong>できる</div></div>
   </div>
 </div>
-<div class="card" style="background:rgba(26,122,74,0.12);border-color:rgba(26,122,74,0.3);font-size:13px;line-height:2;">
-  ✨ 持込予定が1名以上 → <strong style="color:#5dcc8a;">開店してください</strong><br>
-  🚤 出漁中が3名以上 → <strong style="color:#5dcc8a;">待機推奨</strong><br>
-  🏠 在庫ありが1名以上 → <strong style="color:#5dcc8a;">引取り可能</strong><br>
-  全員帰宅＆在庫なし → <strong style="color:#5dcc8a;">閉店OK</strong>
+
+<div class="tip-box">
+  ✨ 持込予定が1名以上 → <strong>開店してください</strong><br>
+  🚤 出漁中が3名以上 → <strong>待機推奨</strong><br>
+  🏠 在庫ありが1名以上 → <strong>引取り可能</strong><br>
+  全員帰宅＆在庫なし → <strong>閉店OK</strong>
 </div>
-<div style="font-size:11px;color:rgba(232,244,248,0.35);text-align:center;margin-top:16px;line-height:1.8;">
+
+<div class="note">
   📌 ブックマークに追加しておくと便利です<br>
   名前は毎回同じものを入力してください<br>
   不明な点は仲買までご連絡ください
 </div>
+
 </body>
 </html>
-
