@@ -63,17 +63,18 @@
   #shop-status-bar {
     position: relative; z-index: 10;
     display: flex; align-items: center; justify-content: center;
-    gap: 8px; padding: 9px 14px;
-    font-size: 13px; font-weight: 700;
+    gap: 10px; padding: 13px 14px;
+    font-size: 17px; font-weight: 900;
     transition: background 0.3s;
     border-bottom: 1px solid rgba(255,255,255,0.06);
+    letter-spacing: 0.04em;
   }
-  #shop-status-bar.open  { background: rgba(26,122,74,0.3); color: #5dcc8a; border-bottom-color: rgba(26,122,74,0.3); }
-  #shop-status-bar.close { background: rgba(192,57,43,0.22); color: #ff8888; border-bottom-color: rgba(192,57,43,0.2); }
+  #shop-status-bar.open  { background: rgba(26,122,74,0.4); color: #5dcc8a; border-bottom-color: rgba(26,122,74,0.4); }
+  #shop-status-bar.close { background: rgba(192,57,43,0.35); color: #ff8888; border-bottom-color: rgba(192,57,43,0.3); }
   #shop-status-bar.unknown { background: rgba(80,80,80,0.2); color: rgba(232,244,248,0.4); }
-  .shop-status-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
-  .shop-status-dot.open  { background:#5dcc8a; box-shadow:0 0 6px #5dcc8a; animation:blink 2s infinite; }
-  .shop-status-dot.close { background:#ff8888; }
+  .shop-status-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+  .shop-status-dot.open  { background:#5dcc8a; box-shadow:0 0 8px #5dcc8a; animation:blink 2s infinite; }
+  .shop-status-dot.close { background:#ff8888; box-shadow:0 0 8px #ff8888; }
   .shop-status-dot.unknown { background:#666; }
 
   #sync-bar {
