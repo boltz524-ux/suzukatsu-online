@@ -292,6 +292,37 @@
   .msg-text { font-size:14px; line-height:1.7; color:var(--foam); }
   .msg-meta { font-size:10px; color:rgba(232,244,248,0.4); margin-top:6px; }
   .msg-empty { font-size:13px; color:rgba(232,244,248,0.35); text-align:center; padding:10px 0; }
+  .like-row {
+    display:flex; align-items:center; gap:8px;
+    margin-top:10px; padding-top:8px;
+    border-top:1px solid rgba(255,255,255,0.06);
+    flex-wrap:wrap;
+  }
+  .like-btn {
+    display:flex; align-items:center; gap:5px;
+    padding:5px 12px; border-radius:20px;
+    border:1px solid rgba(255,255,255,0.15);
+    background:rgba(255,255,255,0.05);
+    color:rgba(232,244,248,0.6);
+    font-size:12px; font-weight:700;
+    cursor:pointer; font-family:'Noto Sans JP',sans-serif;
+    transition:all 0.2s;
+  }
+  .like-btn.liked {
+    border-color:rgba(255,100,100,0.5);
+    background:rgba(255,100,100,0.12);
+    color:#ff8888;
+  }
+  .like-count { font-size:12px; font-weight:700; }
+  .like-names {
+    font-size:10px; color:rgba(232,244,248,0.4);
+    margin-left:2px;
+  }
+  .like-names-buyer {
+    font-size:11px; color:rgba(232,244,248,0.5);
+    margin-top:6px; line-height:1.6; width:100%;
+  }
+
   .msg-delete-btn {
     position:absolute; top:8px; right:8px;
     background:rgba(192,57,43,0.2); border:1px solid rgba(192,57,43,0.3);
@@ -909,20 +940,49 @@ window.deleteMsg = async function(id) {
 function renderMessages(isBuyer) {
   const sorted = [...messages].sort((a,b) => b.sentAt - a.sentAt);
   const count  = sorted.length;
+
+  const makeHtml = (m, asBuyer) => {
+    const likes = m.likes || {};
+    const likeNames = Object.values(likes);
+    const likeCount = likeNames.length;
+    const myLiked = myName && likes[safeKey(myName)];
+
+    const likeBtn = asBuyer
+      ? '' // 仲買はいいね不可
+      : `<button class="like-btn ${myLiked ? 'liked' : ''}" onclick="toggleLike(${m.id})">
+          👍
+        </button>`;
+
+    const likeNamesHtml = asBuyer && likeCount > 0
+      ? `<div class="like-names-buyer">👍 ${likeNames.map(n => esc(n)).join('　')}</div>`
+      : '';
+
+    return `
+      <div class="msg-item">
+        <div class="msg-text">${esc(m.text)}</div>
+        <div class="msg-meta">🏪 仲買より　${fmtFull(m.sentAt)}（${fmtTime(m.sentAt)}）</div>
+        ${asBuyer ? `<button class="msg-delete-btn" onclick="deleteMsg(${m.id})">削除</button>` : ''}
+        <div class="like-row">
+          ${likeBtn}
+          ${likeNamesHtml}
+        </div>
+      </div>
+    `;
+  };
+
   const html = count === 0
     ? '<div class="msg-empty">まだメッセージはありません</div>'
-    : sorted.map(m => `
-        <div class="msg-item">
-          <div class="msg-text">${esc(m.text)}</div>
-          <div class="msg-meta">🏪 仲買より　${fmtFull(m.sentAt)}（${fmtTime(m.sentAt)}）</div>
-          ${isBuyer ? `<button class="msg-delete-btn" onclick="deleteMsg(${m.id})">削除</button>` : ''}
-        </div>
-      `).join('');
+    : sorted.map(m => makeHtml(m, isBuyer)).join('');
 
-  document.getElementById('fisher-msg-list').innerHTML = html;
-  document.getElementById('board-msg-list').innerHTML  = html;
+  const htmlFisher = count === 0
+    ? '<div class="msg-empty">まだメッセージはありません</div>'
+    : sorted.map(m => makeHtml(m, false)).join('');
+
+  document.getElementById('fisher-msg-list').innerHTML = htmlFisher;
+  document.getElementById('board-msg-list').innerHTML  = isBuyer ? html : htmlFisher;
   document.getElementById('fisher-msg-count').textContent = count + '件';
   document.getElementById('board-msg-count').textContent  = count + '件';
+
   // 掲示板タブのバッジ更新
   const badge = document.getElementById('board-tab-badge');
   const isBoard = document.getElementById('screen-board').classList.contains('active');
@@ -933,6 +993,27 @@ function renderMessages(isBuyer) {
     badge.classList.remove('visible');
   }
 }
+
+// いいねトグル
+window.toggleLike = async function(msgId) {
+  if (!requireName()) return;
+  const key = safeKey(myName);
+  const msg = messages.find(m => m.id === msgId);
+  if (!msg) return;
+  const likes = msg.likes || {};
+  const likeRef = ref(db, 'messages/' + msgId + '/likes/' + key);
+  setSyncStatus('syncing', '送信中…');
+  try {
+    if (likes[key]) {
+      await remove(likeRef);
+    } else {
+      await set(likeRef, myName);
+    }
+    setSyncStatus('ok', '送信完了');
+  } catch(e) {
+    setSyncStatus('error', '送信失敗');
+  }
+};
 
 // ── 仲買画面 ───────────────────────────────
 function renderBuyer() {
