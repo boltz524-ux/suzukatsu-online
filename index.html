@@ -115,10 +115,13 @@
     font-size:9px; font-weight:900;
     min-width:16px; height:16px;
     border-radius:20px; padding:0 4px;
-    line-height:16px; text-align:center;
+    text-align:center;
     border:2px solid var(--ink);
+    display:none;
+    align-items:center; justify-content:center;
   }
-  .tab-badge.visible { display:block; }
+  .tab-badge.visible { display:flex; }
+
 
   .screen { display:none; position:relative; z-index:5; padding:14px; padding-bottom:30px; }
   .screen.active { display:block; }
