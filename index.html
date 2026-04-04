@@ -59,6 +59,23 @@
   .live-dot { width:7px; height:7px; background:#7fff7f; border-radius:50%; animation: blink 1.5s infinite; }
   @keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
 
+  /* ── オープン状況バー ── */
+  #shop-status-bar {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 9px 14px;
+    font-size: 13px; font-weight: 700;
+    transition: background 0.3s;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  #shop-status-bar.open  { background: rgba(26,122,74,0.3); color: #5dcc8a; border-bottom-color: rgba(26,122,74,0.3); }
+  #shop-status-bar.close { background: rgba(192,57,43,0.22); color: #ff8888; border-bottom-color: rgba(192,57,43,0.2); }
+  #shop-status-bar.unknown { background: rgba(80,80,80,0.2); color: rgba(232,244,248,0.4); }
+  .shop-status-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .shop-status-dot.open  { background:#5dcc8a; box-shadow:0 0 6px #5dcc8a; animation:blink 2s infinite; }
+  .shop-status-dot.close { background:#ff8888; }
+  .shop-status-dot.unknown { background:#666; }
+
   #sync-bar {
     position: relative; z-index: 10;
     padding: 5px 14px;
@@ -148,6 +165,8 @@
   .btn-save   { background: linear-gradient(135deg,#0e6a7a,#0a4a58); color:#fff; box-shadow:0 5px 16px rgba(14,106,122,0.4); }
   .btn-send   { background: linear-gradient(135deg,var(--purple),#8b5cf6); color:#fff; box-shadow:0 6px 20px rgba(108,61,181,0.45); }
   .btn-danger { background: linear-gradient(135deg,#7a1515,#5a0e0e); color:#ffaaaa; box-shadow:0 4px 12px rgba(0,0,0,0.3); }
+  .btn-open   { background: linear-gradient(135deg,var(--green),#0fa85e); color:#fff; box-shadow:0 6px 20px rgba(26,122,74,0.4); font-size:18px; padding:22px 14px; }
+  .btn-close-shop { background: linear-gradient(135deg,#c0392b,#96281b); color:#fff; box-shadow:0 6px 20px rgba(192,57,43,0.4); font-size:18px; padding:22px 14px; }
 
   .stock-toggle-row { display:flex; gap:8px; margin-bottom:12px; }
   .stock-toggle {
@@ -329,6 +348,12 @@
   <div class="live-badge"><div class="live-dot"></div>LIVE</div>
 </header>
 
+<!-- オープン状況バー（全タブ共通） -->
+<div id="shop-status-bar" class="unknown">
+  <div class="shop-status-dot unknown" id="shop-status-dot"></div>
+  <span id="shop-status-text">接続中…</span>
+</div>
+
 <div id="sync-bar" class="ok">
   <div class="sync-dot ok" id="sync-dot"></div>
   <span id="sync-text">接続済み</span>
@@ -412,6 +437,13 @@
     <div class="summary-cell"><div class="summary-num num-stock" id="cnt-stock">0</div><div class="summary-label">在庫あり</div></div>
   </div>
 
+  <!-- オープン切り替えカード -->
+  <div class="card">
+    <div class="card-title">🏪 店のオープン状況を切り替え</div>
+    <button class="big-btn btn-open"       onclick="setShopStatus('open')">🟢 開店する</button>
+    <button class="big-btn btn-close-shop" onclick="setShopStatus('close')">🔴 閉店する</button>
+  </div>
+
   <div class="shop-banner" id="shop-banner">
     <div class="banner-icon" id="banner-icon">⏳</div>
     <div>
@@ -485,16 +517,12 @@
   </div>
 </div>
 
-<footer>🐟 すずかつオンライン　v3.0　— Firebase版 —</footer>
+<footer>🐟 すずかつオンライン　v3.1　— Firebase版 —</footer>
 
-<!-- ════════════════════════════════════════
-     Firebase SDK (module)
-════════════════════════════════════════ -->
 <script type="module">
 import { initializeApp }                          from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, set, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
-// ── Firebase 設定 ──────────────────────────
 const firebaseConfig = {
   apiKey:            "AIzaSyAvjG8DbYAVZap6oJgwYxPBweQiASXbKBo",
   authDomain:        "suzukatsu-online.firebaseapp.com",
@@ -508,12 +536,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
 
-// ── ローカル状態 ───────────────────────────
-let fishers  = {};   // Firebaseから来るデータ
+let fishers  = {};
 let messages = [];
 let myName   = '';
 let myStockHave = null;
 let myStockAmt  = '';
+let shopOpen = null; // null=不明, true=開店, false=閉店
 
 // ── 同期バー ───────────────────────────────
 function setSyncStatus(status, text) {
@@ -523,6 +551,38 @@ function setSyncStatus(status, text) {
   dot.className = 'sync-dot ' + (status === 'syncing' ? 'syncing' : status === 'error' ? 'error' : 'ok');
   document.getElementById('sync-text').textContent = text;
 }
+
+// ── オープン状況バー更新 ───────────────────
+function renderShopStatusBar() {
+  const bar  = document.getElementById('shop-status-bar');
+  const dot  = document.getElementById('shop-status-dot');
+  const text = document.getElementById('shop-status-text');
+  if (shopOpen === true) {
+    bar.className  = 'open';
+    dot.className  = 'shop-status-dot open';
+    text.textContent = '🏪 現在　開店中';
+  } else if (shopOpen === false) {
+    bar.className  = 'close';
+    dot.className  = 'shop-status-dot close';
+    text.textContent = '🔒 現在　閉店中';
+  } else {
+    bar.className  = 'unknown';
+    dot.className  = 'shop-status-dot unknown';
+    text.textContent = '— オープン状況未設定 —';
+  }
+}
+
+// ── 仲買：オープン状況切り替え ─────────────
+window.setShopStatus = async function(status) {
+  setSyncStatus('syncing', '送信中…');
+  try {
+    await set(ref(db, 'shopStatus'), { open: status === 'open', updatedAt: Date.now() });
+    setSyncStatus('ok', '送信完了');
+  } catch(e) {
+    setSyncStatus('error', '送信失敗');
+    alert('送信に失敗しました：' + e.message);
+  }
+};
 
 // ── utils ──────────────────────────────────
 function fmtTime(ts) {
@@ -550,7 +610,6 @@ function requireName() {
   return false;
 }
 function safeKey(name) {
-  // Firebase キーに使えない文字を除去（. # $ / [ ]）
   return name.replace(/[.#$\/\[\]]/g, '_');
 }
 
@@ -822,6 +881,7 @@ window.confirmReset = async function() {
   try {
     await remove(ref(db, 'fishers'));
     await remove(ref(db, 'messages'));
+    await remove(ref(db, 'shopStatus'));
     setSyncStatus('ok', 'リセット完了');
     alert('✅ リセット完了しました。');
   } catch(e) {
@@ -846,7 +906,6 @@ window.selectCatchAmount = function(amt) {
 // ── Firebase リアルタイムリスナー ──────────
 onValue(ref(db, 'fishers'), snapshot => {
   fishers = snapshot.val() || {};
-  // 名前が入力済みなら自分のステータスを反映
   if (myName) { restoreMyStockUI(); renderMyStatus(); }
   if (document.getElementById('screen-buyer').classList.contains('active')) renderBuyer();
   setSyncStatus('ok', '接続済み');
@@ -860,22 +919,29 @@ onValue(ref(db, 'messages'), snapshot => {
   setSyncStatus('ok', '接続済み');
 });
 
+// ── オープン状況リスナー ───────────────────
+onValue(ref(db, 'shopStatus'), snapshot => {
+  const val = snapshot.val();
+  if (val && val.open !== undefined) {
+    shopOpen = val.open;
+  } else {
+    shopOpen = null;
+  }
+  renderShopStatusBar();
+});
+
 // ── 起動 ───────────────────────────────────
 (function init() {
-  // 名前をlocalStorageから復元
   const saved = localStorage.getItem('shirasu-myname');
   if (saved) {
     myName = saved;
     document.getElementById('fisher-name').value = saved;
   }
-  // ローディング非表示（リスナーが初回発火したら消す）
-  const unsub = onValue(ref(db, 'fishers'), () => {
+  onValue(ref(db, 'fishers'), () => {
     document.getElementById('loading-overlay').style.display = 'none';
     setSyncStatus('ok', '接続済み');
-    // 1回だけ実行したいのでusubを使わず、overlayの状態で判断
   }, { onlyOnce: true });
 
-  // タイムアウト（5秒でFirebase接続失敗なら案内）
   setTimeout(() => {
     const overlay = document.getElementById('loading-overlay');
     if (overlay.style.display !== 'none') {
@@ -883,7 +949,6 @@ onValue(ref(db, 'messages'), snapshot => {
     }
   }, 5000);
 
-  // 「〜分前」の定期更新
   setInterval(() => {
     if (document.getElementById('screen-buyer').classList.contains('active')) renderBuyer();
     if (myName) renderMyStatus();
