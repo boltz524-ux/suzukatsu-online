@@ -63,19 +63,41 @@
   #shop-status-bar {
     position: relative; z-index: 10;
     display: flex; align-items: center; justify-content: center;
-    gap: 10px; padding: 13px 14px;
-    font-size: 17px; font-weight: 900;
-    transition: background 0.3s;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    letter-spacing: 0.04em;
+    flex-direction: column;
+    gap: 4px; padding: 16px 14px;
+    transition: background 0.4s;
+    border-bottom: 3px solid transparent;
   }
-  #shop-status-bar.open  { background: rgba(26,122,74,0.4); color: #5dcc8a; border-bottom-color: rgba(26,122,74,0.4); }
-  #shop-status-bar.close { background: rgba(192,57,43,0.35); color: #ff8888; border-bottom-color: rgba(192,57,43,0.3); }
-  #shop-status-bar.unknown { background: rgba(80,80,80,0.2); color: rgba(232,244,248,0.4); }
-  .shop-status-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
-  .shop-status-dot.open  { background:#5dcc8a; box-shadow:0 0 8px #5dcc8a; animation:blink 2s infinite; }
-  .shop-status-dot.close { background:#ff8888; box-shadow:0 0 8px #ff8888; }
-  .shop-status-dot.unknown { background:#666; }
+  #shop-status-bar.open  {
+    background: linear-gradient(135deg, rgba(26,122,74,0.6), rgba(26,122,74,0.3));
+    border-bottom-color: #5dcc8a;
+  }
+  #shop-status-bar.close {
+    background: linear-gradient(135deg, rgba(192,57,43,0.55), rgba(192,57,43,0.25));
+    border-bottom-color: #ff8888;
+  }
+  #shop-status-bar.unknown {
+    background: rgba(80,80,80,0.2);
+    border-bottom-color: transparent;
+  }
+  .shop-status-main {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .shop-status-icon { font-size: 32px; line-height: 1; }
+  .shop-status-label {
+    font-size: 22px; font-weight: 900;
+    letter-spacing: 0.06em;
+  }
+  #shop-status-bar.open  .shop-status-label { color: #ffffff; text-shadow: 0 0 12px rgba(93,204,138,0.8); }
+  #shop-status-bar.close .shop-status-label { color: #ffffff; text-shadow: 0 0 12px rgba(255,136,136,0.8); }
+  #shop-status-bar.unknown .shop-status-label { color: rgba(232,244,248,0.4); }
+  .shop-status-sub {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  }
+  #shop-status-bar.open  .shop-status-sub { color: rgba(93,204,138,0.8); }
+  #shop-status-bar.close .shop-status-sub { color: rgba(255,136,136,0.8); }
+  #shop-status-bar.unknown .shop-status-sub { color: rgba(232,244,248,0.3); }
+  .shop-status-dot { display:none; }
 
   #sync-bar {
     position: relative; z-index: 10;
@@ -455,8 +477,11 @@
 
 <!-- オープン状況バー（全タブ共通） -->
 <div id="shop-status-bar" class="unknown">
-  <div class="shop-status-dot unknown" id="shop-status-dot"></div>
-  <span id="shop-status-text">接続中…</span>
+  <div class="shop-status-main">
+    <span class="shop-status-icon" id="shop-status-icon">⏳</span>
+    <span class="shop-status-label" id="shop-status-text">接続中…</span>
+  </div>
+  <div class="shop-status-sub" id="shop-status-sub"></div>
 </div>
 
 <div id="sync-bar" class="ok">
@@ -691,20 +716,24 @@ function setSyncStatus(status, text) {
 // ── オープン状況バー更新 ───────────────────
 function renderShopStatusBar() {
   const bar  = document.getElementById('shop-status-bar');
-  const dot  = document.getElementById('shop-status-dot');
+  const icon = document.getElementById('shop-status-icon');
   const text = document.getElementById('shop-status-text');
+  const sub  = document.getElementById('shop-status-sub');
   if (shopOpen === true) {
-    bar.className  = 'open';
-    dot.className  = 'shop-status-dot open';
-    text.textContent = '🏪 現在　開店中';
+    bar.className    = 'open';
+    icon.textContent = '🟢';
+    text.textContent = '開　店　中';
+    sub.textContent  = '現在受付しています';
   } else if (shopOpen === false) {
-    bar.className  = 'close';
-    dot.className  = 'shop-status-dot close';
-    text.textContent = '🔒 現在　閉店中';
+    bar.className    = 'close';
+    icon.textContent = '🔴';
+    text.textContent = '閉　店　中';
+    sub.textContent  = '本日の受付は終了しました';
   } else {
-    bar.className  = 'unknown';
-    dot.className  = 'shop-status-dot unknown';
-    text.textContent = '— オープン状況未設定 —';
+    bar.className    = 'unknown';
+    icon.textContent = '⏳';
+    text.textContent = '状況未設定';
+    sub.textContent  = '';
   }
 }
 
