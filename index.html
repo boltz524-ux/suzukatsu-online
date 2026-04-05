@@ -546,6 +546,8 @@
         <button class="stock-amt-btn" data-val="中量 (50〜100g)" onclick="setStockAmt(this)">中量<br><small style="font-weight:400">50〜100g</small></button>
         <button class="stock-amt-btn" data-val="多量 (100g〜)"   onclick="setStockAmt(this)">多量<br><small style="font-weight:400">100g〜</small></button>
       </div>
+    </div>
+    <div class="stock-section" id="stock-note-section">
       <input class="inp" id="stock-note" placeholder="メモ（例：元気に泳いでいる、少し弱っている…）" style="margin-bottom:0;" />
     </div>
     <button class="big-btn btn-save" onclick="saveStock()" style="margin-top:12px;">💾 在庫情報を保存</button>
@@ -951,6 +953,7 @@ window.setStockHave = function(val) {
   document.getElementById('stock-yes').className = 'stock-toggle' + (val  ? ' active-yes' : '');
   document.getElementById('stock-no').className  = 'stock-toggle' + (!val ? ' active-no'  : '');
   document.getElementById('stock-amount-section').className = 'stock-section' + (val ? ' visible' : '');
+  document.getElementById('stock-note-section').className   = 'stock-section visible';
   if (!val) {
     myStockAmt = '';
     document.querySelectorAll('.stock-amt-btn').forEach(b => b.classList.remove('sel'));
@@ -1165,9 +1168,12 @@ function renderBuyer() {
     const dotCls  = dotMap[f.status]   || 'dot-unknown';
     const hasCatch = f.status === 'catch';
     const hasStock = f.stockHave === true;
+    const hasNoStock = f.stockHave === false;
     const stockTag = hasStock
       ? `<span class="stock-tag">🏠 在庫あり${f.stockAmt ? '：'+esc(f.stockAmt) : ''}${f.stockNote ? ' ('+esc(f.stockNote)+')' : ''}</span>`
-      : '';
+      : hasNoStock
+        ? `<span class="stock-tag" style="background:rgba(119,119,170,0.14);color:#aaa;border-color:rgba(119,119,170,0.3);">❌ 在庫なし${f.stockNote ? '：'+esc(f.stockNote) : ''}</span>`
+        : '';
     const parts = [];
     if (f.catchAmount)    parts.push('📦 持込：' + esc(f.catchAmount));
     if (f.updatedAt)      parts.push('更新：' + fmtTime(f.updatedAt));
