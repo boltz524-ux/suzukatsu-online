@@ -390,6 +390,45 @@
   .reset-area { margin-top:18px; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px; }
   .reset-label { font-size:10px; color:rgba(232,244,248,0.3); margin-bottom:8px; text-align:center; }
 
+  /* カメラQR読み取りモーダル */
+  #camera-modal {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,0.92);
+    z-index:200; flex-direction:column;
+    align-items:center; justify-content:center; gap:16px;
+  }
+  #camera-modal.open { display:flex; }
+  #camera-video {
+    width:100%; max-width:360px;
+    border-radius:16px; overflow:hidden;
+    border:2px solid rgba(232,160,32,0.5);
+  }
+  .camera-frame {
+    position:relative; width:100%; max-width:360px;
+  }
+  .camera-overlay {
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none;
+  }
+  .camera-guide {
+    width:200px; height:200px;
+    border:3px solid var(--gold);
+    border-radius:12px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,0.45);
+  }
+  .camera-label {
+    font-size:13px; font-weight:700;
+    color:rgba(232,244,248,0.7); text-align:center;
+  }
+  .camera-cancel {
+    padding:13px 32px; border-radius:12px;
+    border:1px solid rgba(255,255,255,0.2);
+    background:transparent; color:rgba(232,244,248,0.6);
+    font-size:15px; cursor:pointer;
+    font-family:'Noto Sans JP',sans-serif;
+  }
+
   .qr-card-img {
     display:flex; justify-content:center; margin:14px 0 8px;
   }
@@ -575,7 +614,10 @@
   <div class="card">
     <div class="card-title">📱 トレーサビリティ QRコード</div>
     <div class="section-label">あなたのQRコードURL</div>
-    <input class="inp" id="qr-url-input" placeholder="https://example.com/trace/..." oninput="previewQr()" />
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <input class="inp" id="qr-url-input" placeholder="https://example.com/trace/..." oninput="previewQr()" style="margin-bottom:0;flex:1;" />
+      <button onclick="openCamera()" style="padding:0 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.07);font-size:22px;cursor:pointer;flex-shrink:0;">📷</button>
+    </div>
     <button class="big-btn btn-save" onclick="saveQrUrl()" style="margin-bottom:0;">💾 QRコードを保存する</button>
     <div id="qr-display" style="margin-top:4px;">
       <div class="qr-empty">URLを入力してください</div>
@@ -692,6 +734,17 @@
   </div>
 </div>
 
+<!-- カメラQR読み取りモーダル -->
+<div id="camera-modal">
+  <div class="camera-label">📷 QRコードをカメラに映してください</div>
+  <div class="camera-frame">
+    <video id="camera-video" autoplay playsinline muted></video>
+    <div class="camera-overlay"><div class="camera-guide"></div></div>
+  </div>
+  <canvas id="camera-canvas" style="display:none;"></canvas>
+  <button class="camera-cancel" onclick="closeCamera()">キャンセル</button>
+</div>
+
 <!-- 持込量モーダル -->
 <div class="modal-overlay" id="catch-modal">
   <div class="modal-sheet">
@@ -708,6 +761,7 @@
 
 <footer>🐟 すずかつオンライン　v3.1　— Firebase版 —</footer>
 
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script type="module">
 import { initializeApp }                          from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, set, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
@@ -1255,6 +1309,58 @@ function renderQr(url) {
     <div class="qr-card-img"><img src="${qrSrc}" alt="QRコード" /></div>
     <div class="qr-url-text">${esc(url)}</div>
   `;
+}
+
+// ── カメラQR読み取り ───────────────────────
+let cameraStream = null;
+let cameraTimer  = null;
+
+window.openCamera = async function() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }
+    });
+    const video = document.getElementById('camera-video');
+    video.srcObject = cameraStream;
+    document.getElementById('camera-modal').classList.add('open');
+    startQrScan();
+  } catch(e) {
+    alert('カメラを起動できませんでした。
+カメラの許可を確認してください。');
+  }
+};
+
+window.closeCamera = function() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  if (cameraTimer) { clearInterval(cameraTimer); cameraTimer = null; }
+  document.getElementById('camera-modal').classList.remove('open');
+};
+
+function startQrScan() {
+  const video  = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  const ctx    = canvas.getContext('2d');
+
+  cameraTimer = setInterval(() => {
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    // jsQRライブラリで読み取り
+    if (window.jsQR) {
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      if (code && code.data) {
+        document.getElementById('qr-url-input').value = code.data;
+        previewQr();
+        closeCamera();
+      }
+    }
+  }, 300);
 }
 
 window.previewQr = function() {
