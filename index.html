@@ -390,6 +390,25 @@
   .reset-area { margin-top:18px; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px; }
   .reset-label { font-size:10px; color:rgba(232,244,248,0.3); margin-bottom:8px; text-align:center; }
 
+  .qr-card-img {
+    display:flex; justify-content:center; margin:14px 0 8px;
+  }
+  .qr-card-img img {
+    width:200px; height:200px;
+    border-radius:12px;
+    border:3px solid rgba(255,255,255,0.15);
+    background:#fff;
+  }
+  .qr-url-text {
+    font-size:11px; color:rgba(232,244,248,0.4);
+    text-align:center; word-break:break-all;
+    margin-bottom:10px; line-height:1.5;
+  }
+  .qr-empty {
+    text-align:center; padding:20px 0;
+    font-size:13px; color:rgba(232,244,248,0.3);
+  }
+
   footer { position:relative; z-index:5; text-align:center; padding:16px; font-size:10px; color:rgba(232,244,248,0.2); }
 
   /* ── パスワード画面 ── */
@@ -553,6 +572,16 @@
       <div class="msg-empty">まだメッセージはありません</div>
     </div>
   </div>
+  <div class="card">
+    <div class="card-title">📱 トレーサビリティ QRコード</div>
+    <div class="section-label">あなたのQRコードURL</div>
+    <input class="inp" id="qr-url-input" placeholder="https://example.com/trace/..." oninput="previewQr()" />
+    <button class="big-btn btn-save" onclick="saveQrUrl()" style="margin-bottom:0;">💾 QRコードを保存する</button>
+    <div id="qr-display" style="margin-top:4px;">
+      <div class="qr-empty">URLを入力してください</div>
+    </div>
+  </div>
+
 </div>
 
 <!-- 仲買画面 -->
@@ -869,6 +898,12 @@ function restoreMyStockUI() {
   }
   if (me.stockUpdatedAt)
     document.getElementById('stock-save-time').textContent = '最終保存：' + fmtTime(me.stockUpdatedAt);
+  // QRコードを復元
+  if (me.qrUrl) {
+    const inp = document.getElementById('qr-url-input');
+    if (inp) inp.value = me.qrUrl;
+    renderQr(me.qrUrl);
+  }
 }
 
 // ── 漁師ステータス ─────────────────────────
@@ -1205,6 +1240,43 @@ window.closeModal = function() {
 window.selectCatchAmount = function(amt) {
   closeModal();
   window.setFisherStatus('catch', amt);
+};
+
+// ── QRコード ───────────────────────────────
+function renderQr(url) {
+  const display = document.getElementById('qr-display');
+  if (!display) return;
+  if (!url) {
+    display.innerHTML = '<div class="qr-empty">URLを入力してください</div>';
+    return;
+  }
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+  display.innerHTML = `
+    <div class="qr-card-img"><img src="${qrSrc}" alt="QRコード" /></div>
+    <div class="qr-url-text">${esc(url)}</div>
+  `;
+}
+
+window.previewQr = function() {
+  const url = document.getElementById('qr-url-input').value.trim();
+  renderQr(url);
+};
+
+window.saveQrUrl = async function() {
+  if (!requireName()) return;
+  const url = document.getElementById('qr-url-input').value.trim();
+  if (!url) { alert('URLを入力してください'); return; }
+  const key = safeKey(myName);
+  const existing = fishers[key] || {};
+  setSyncStatus('syncing', '保存中…');
+  try {
+    await set(ref(db, 'fishers/' + key), { ...existing, name: myName, qrUrl: url });
+    setSyncStatus('ok', '保存完了');
+    renderQr(url);
+  } catch(e) {
+    setSyncStatus('error', '保存失敗');
+    alert('保存に失敗しました：' + e.message);
+  }
 };
 
 // ── Firebase リアルタイムリスナー ──────────
