@@ -575,7 +575,7 @@
     </div>
   </div>
   <div class="card">
-    <div class="card-title">📱 トレーサビリティ QRコード</div>
+    <div class="card-title">📱 トレーサビリティ QRコード <span style="font-size:9px;color:rgba(232,244,248,0.3);font-weight:400;letter-spacing:0;">📲 このスマホ内にのみ保存</span></div>
     <!-- QR表示モード切替 -->
     <div class="stock-toggle-row" style="margin-bottom:12px;">
       <button class="stock-toggle" id="qr-mode-url" onclick="setQrMode('url')" style="font-size:12px;white-space:nowrap;">🔗 URLから生成</button>
@@ -590,15 +590,19 @@
         <button class="big-btn btn-save" onclick="saveQrUrl()" style="margin-bottom:0;flex:1;">💾 保存する</button>
         <button class="big-btn btn-rest" onclick="clearQr()" style="margin-bottom:0;flex:0 0 56px;font-size:22px;padding:0;">🗑</button>
       </div>
+
     </div>
 
     <!-- 画像モード -->
     <div id="qr-section-img" style="display:none;">
       <div class="section-label">QRコード画像を選択</div>
       <input type="file" id="qr-img-file" accept="image/*" style="display:none;" onchange="loadQrImage(this)" />
-      <button class="big-btn btn-save" onclick="document.getElementById('qr-img-file').click()" style="margin-bottom:10px;">📂 画像を選択する</button>
+      <button class="big-btn btn-save" onclick="document.getElementById('qr-img-file').click()" style="margin-bottom:10px;">📂 画像を選択・変更する</button>
       <div id="qr-img-preview"></div>
-      <button class="big-btn btn-rest" onclick="clearQrImage()" style="margin-top:8px;font-size:13px;" id="qr-img-clear-btn">🗑 画像をクリア</button>
+      <div style="display:flex;gap:8px;margin-top:8px;" id="qr-img-action-row">
+        <button class="big-btn btn-rest" onclick="clearQrImage()" style="margin-bottom:0;flex:0 0 56px;font-size:22px;padding:0;" id="qr-img-clear-btn">🗑</button>
+      </div>
+      <div style="font-size:10px;color:rgba(232,244,248,0.35);text-align:center;margin-top:6px;">📱 このスマホ内にのみ保存されます</div>
     </div>
     <div id="qr-display" style="margin-top:4px;">
       <div class="qr-empty">URLを入力してください</div>
@@ -1308,13 +1312,13 @@ function loadSavedQrImage() {
   if (!key) return;
   const saved = localStorage.getItem(key);
   const preview = document.getElementById('qr-img-preview');
-  const clearBtn = document.getElementById('qr-img-clear-btn');
+  const actionRow = document.getElementById('qr-img-action-row');
   if (saved) {
     preview.innerHTML = `<div class="qr-card-img"><img src="${saved}" style="width:200px;height:200px;object-fit:contain;border-radius:12px;border:3px solid rgba(255,255,255,0.15);background:#fff;" /></div>`;
-    clearBtn.style.display = 'flex';
+    actionRow.style.display = 'flex';
   } else {
     preview.innerHTML = '<div class="qr-empty">画像が登録されていません</div>';
-    clearBtn.style.display = 'none';
+    actionRow.style.display = 'none';
   }
 }
 
@@ -1325,8 +1329,14 @@ window.loadQrImage = function(input) {
   const reader = new FileReader();
   reader.onload = (e) => {
     const dataUrl = e.target.result;
-    const key = 'qr-img-' + safeKey(myName);
-    localStorage.setItem(key, dataUrl);
+    // localStorageに自動保存
+    try {
+      localStorage.setItem('qr-img-' + safeKey(myName), dataUrl);
+    } catch(e) {
+      alert('画像サイズが大きすぎて保存できませんでした。
+小さい画像を使用してください。');
+      return;
+    }
     loadSavedQrImage();
   };
   reader.readAsDataURL(file);
