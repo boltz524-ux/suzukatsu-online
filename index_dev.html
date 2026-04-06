@@ -390,51 +390,6 @@
   .reset-area { margin-top:18px; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px; }
   .reset-label { font-size:10px; color:rgba(232,244,248,0.3); margin-bottom:8px; text-align:center; }
 
-  /* カメラQR読み取りモーダル */
-  #camera-modal {
-    display:none; position:fixed; inset:0;
-    background:rgba(0,0,0,0.92);
-    z-index:300; flex-direction:column;
-    align-items:center; justify-content:center; gap:16px;
-    padding:20px;
-  }
-  #camera-modal.open { display:flex; }
-  .camera-frame {
-    position:relative; width:100%; max-width:340px;
-    border-radius:16px;
-    border:2px solid rgba(232,160,32,0.5);
-  }
-  #camera-video {
-    width:100%; display:block;
-    border-radius:14px;
-    background:#000;
-  }
-  .camera-overlay {
-    position:absolute; inset:0;
-    display:flex; align-items:center; justify-content:center;
-    pointer-events:none;
-    border-radius:14px;
-    overflow:hidden;
-  }
-  .camera-guide {
-    width:180px; height:180px;
-    border:3px solid var(--gold);
-    border-radius:12px;
-    box-shadow:0 0 0 9999px rgba(0,0,0,0.45);
-    position:relative; z-index:1;
-  }
-  .camera-label {
-    font-size:13px; font-weight:700;
-    color:rgba(232,244,248,0.8); text-align:center;
-  }
-  .camera-cancel {
-    padding:13px 32px; border-radius:12px;
-    border:1px solid rgba(255,255,255,0.2);
-    background:rgba(255,255,255,0.07); color:rgba(232,244,248,0.7);
-    font-size:15px; cursor:pointer;
-    font-family:'Noto Sans JP',sans-serif;
-  }
-
   .qr-card-img {
     display:flex; justify-content:center; margin:14px 0 8px;
   }
@@ -743,17 +698,6 @@
     <button class="big-btn btn-going" onclick="checkPassword()" style="margin-bottom:8px;">確認する</button>
     <button class="pw-cancel" onclick="cancelPassword()">キャンセル</button>
   </div>
-</div>
-
-<!-- カメラQR読み取りモーダル -->
-<div id="camera-modal">
-  <div class="camera-label">📷 QRコードをガイド枠に合わせてください</div>
-  <div class="camera-frame">
-    <video id="camera-video" autoplay playsinline muted></video>
-    <canvas id="camera-canvas" style="display:none;"></canvas>
-    <div class="camera-overlay"><div class="camera-guide"></div></div>
-  </div>
-  <button class="camera-cancel" onclick="closeCamera()">キャンセル</button>
 </div>
 
 <!-- 持込量モーダル -->
@@ -1308,110 +1252,6 @@ window.closeModal = function() {
 window.selectCatchAmount = function(amt) {
   closeModal();
   window.setFisherStatus('catch', amt);
-};
-
-// ── カメラQR読み取り ───────────────────────
-let cameraStream = null;
-let scanTimer    = null;
-
-window.openCamera = async function() {
-  // Android Chrome等（BarcodeDetector対応）
-  if ('BarcodeDetector' in window) {
-    try {
-      const bd = new BarcodeDetector({ formats: ['qr_code'] });
-      cameraStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
-      });
-      const video = document.getElementById('camera-video');
-      video.srcObject = cameraStream;
-      document.getElementById('camera-modal').classList.add('open');
-      await video.play();
-      const canvas = document.getElementById('camera-canvas');
-      const ctx = canvas.getContext('2d');
-      scanTimer = setInterval(async () => {
-        if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
-        try {
-          const codes = await bd.detect(canvas);
-          if (codes.length > 0) {
-            document.getElementById('qr-url-input').value = codes[0].rawValue;
-            window.previewQr();
-            closeCamera();
-          }
-        } catch(e) {}
-      }, 500);
-      return;
-    } catch(e) {}
-  }
-  // iPhone Safari → ファイル選択でカメラ起動
-  document.getElementById('qr-file-input').click();
-};
-
-window.closeCamera = function() {
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(t => t.stop());
-    cameraStream = null;
-  }
-  if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
-  document.getElementById('camera-modal').classList.remove('open');
-};
-
-// iPhone：撮影した画像からCanvasでピクセルデータを取得しAPIで解析
-window.readQrFromFile = async function(input) {
-  const file = input.files[0];
-  if (!file) return;
-  input.value = '';
-
-  const img = new Image();
-  img.src = URL.createObjectURL(file);
-  img.onload = async () => {
-    // まずBarcodeDetectorで試みる（対応端末）
-    if ('BarcodeDetector' in window) {
-      try {
-        const bd = new BarcodeDetector({ formats: ['qr_code'] });
-        const codes = await bd.detect(img);
-        if (codes.length > 0) {
-          document.getElementById('qr-url-input').value = codes[0].rawValue;
-          window.previewQr();
-          URL.revokeObjectURL(img.src);
-          return;
-        }
-      } catch(e) {}
-    }
-    // iPhoneはCanvasに描画してbase64でQR読み取りAPIに送信
-    const canvas = document.createElement('canvas');
-    const maxSize = 600;
-    const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
-    canvas.width  = img.width  * scale;
-    canvas.height = img.height * scale;
-    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-    URL.revokeObjectURL(img.src);
-
-    // zxing.appの無料APIで解析
-    canvas.toBlob(async (blob) => {
-      const formData = new FormData();
-      formData.append('file', blob, 'qr.jpg');
-      try {
-        const res = await fetch('https://api.qrserver.com/v1/read-qr-code/', {
-          method: 'POST',
-          body: formData
-        });
-        const data = await res.json();
-        const text = data?.[0]?.symbol?.[0]?.data;
-        if (text) {
-          document.getElementById('qr-url-input').value = text;
-          window.previewQr();
-        } else {
-          alert('QRコードを読み取れませんでした。
-もう少し近づけて撮影してみてください。');
-        }
-      } catch(e) {
-        alert('読み取りに失敗しました。URLを直接入力してください。');
-      }
-    }, 'image/jpeg', 0.9);
-  };
 };
 
 // ── QRコード ───────────────────────────────
