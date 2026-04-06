@@ -577,13 +577,6 @@
   <div class="card">
     <div class="card-title">📱 トレーサビリティ QRコード</div>
     <div class="section-label">あなたのQRコードURL</div>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
-      <input class="inp" id="qr-url-input" placeholder="https://example.com/trace/..." oninput="previewQr()" style="margin-bottom:0;flex:1;" />
-      <button onclick="openCamera()" style="width:48px;height:48px;border-radius:12px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.07);font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">📷</button>
-    </div>
-
-    <!-- iPhoneフォールバック用 -->
-    <input type="file" id="qr-file-input" accept="image/*" capture="environment" style="display:none;" onchange="readQrFromFile(this)" />
     <button class="big-btn btn-save" onclick="saveQrUrl()" style="margin-bottom:0;">💾 QRコードを保存する</button>
     <div id="qr-display" style="margin-top:4px;">
       <div class="qr-empty">URLを入力してください</div>
