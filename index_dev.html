@@ -1319,6 +1319,7 @@ onValue(ref(db, 'shopStatus'), snapshot => {
     myName = saved;
     document.getElementById('fisher-name').value = saved;
   }
+
   onValue(ref(db, 'fishers'), () => {
     document.getElementById('loading-overlay').style.display = 'none';
     setSyncStatus('ok', '接続済み');
