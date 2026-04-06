@@ -921,11 +921,13 @@ function restoreMyStockUI() {
   }
   if (me.stockUpdatedAt)
     document.getElementById('stock-save-time').textContent = '最終保存：' + fmtTime(me.stockUpdatedAt);
-  // QRコードを復元
-  if (me.qrUrl) {
+  // QRコードをlocalStorageから復元
+  const qrKey = 'qr-url-' + safeKey(myName);
+  const savedQrUrl = localStorage.getItem(qrKey);
+  if (savedQrUrl) {
     const inp = document.getElementById('qr-url-input');
-    if (inp) inp.value = me.qrUrl;
-    renderQr(me.qrUrl);
+    if (inp) inp.value = savedQrUrl;
+    renderQr(savedQrUrl);
   }
 }
 
@@ -1339,25 +1341,23 @@ window.clearQrImage = function() {
 };
 
 window.clearQr = function() {
+  if (myName) localStorage.removeItem('qr-url-' + safeKey(myName));
   document.getElementById('qr-url-input').value = '';
   document.getElementById('qr-display').innerHTML = '<div class="qr-empty">URLを入力してください</div>';
 };
 
-window.saveQrUrl = async function() {
+window.saveQrUrl = function() {
   if (!requireName()) return;
   const url = document.getElementById('qr-url-input').value.trim();
   if (!url) { alert('URLを入力してください'); return; }
-  const key = safeKey(myName);
-  const existing = fishers[key] || {};
-  setSyncStatus('syncing', '保存中…');
-  try {
-    await set(ref(db, 'fishers/' + key), { ...existing, name: myName, qrUrl: url });
-    setSyncStatus('ok', '保存完了');
-    renderQr(url);
-  } catch(e) {
-    setSyncStatus('error', '保存失敗');
-    alert('保存に失敗しました：' + e.message);
-  }
+  const key = 'qr-url-' + safeKey(myName);
+  localStorage.setItem(key, url);
+  renderQr(url);
+  // 保存完了フィードバック
+  const btn = document.querySelector('[onclick="saveQrUrl()"]');
+  const orig = btn.textContent;
+  btn.textContent = '✅ 保存しました';
+  setTimeout(() => btn.textContent = orig, 2000);
 };
 
 // ── Firebase リアルタイムリスナー ──────────
