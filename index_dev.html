@@ -627,6 +627,8 @@
       <button onclick="openCamera()" style="width:48px;height:48px;border-radius:12px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.07);font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">📷</button>
     </div>
 
+    <!-- iPhoneフォールバック用 -->
+    <input type="file" id="qr-file-input" accept="image/*" capture="environment" style="display:none;" onchange="readQrFromFile(this)" />
     <button class="big-btn btn-save" onclick="saveQrUrl()" style="margin-bottom:0;">💾 QRコードを保存する</button>
     <div id="qr-display" style="margin-top:4px;">
       <div class="qr-empty">URLを入力してください</div>
@@ -770,7 +772,6 @@
 
 <footer>🐟 すずかつオンライン　v3.1　— 開発用 DEV —</footer>
 
-<script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
 <script type="module">
 import { initializeApp }                          from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, set, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
@@ -1309,79 +1310,109 @@ window.selectCatchAmount = function(amt) {
   window.setFisherStatus('catch', amt);
 };
 
-// ── カメラQR読み取り（ZXing使用・iPhone対応）───
+// ── カメラQR読み取り ───────────────────────
 let cameraStream = null;
-let zxingReader  = null;
+let scanTimer    = null;
 
 window.openCamera = async function() {
-  // ZXingが読み込まれているか確認
-  if (!window.ZXing) {
-    alert('QRリーダーの準備中です。少し待ってから再度お試しください。');
-    return;
-  }
-  try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }
-    });
-    const video = document.getElementById('camera-video');
-    video.srcObject = cameraStream;
-    document.getElementById('camera-modal').classList.add('open');
-    await video.play();
-    startZxingScan(video);
-  } catch(e) {
-    alert('カメラを起動できませんでした。
-カメラの許可を確認してください。');
-  }
-};
-
-function startZxingScan(video) {
-  const hints = new Map();
-  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE]);
-  const reader = new ZXing.MultiFormatReader();
-  reader.setHints(hints);
-  zxingReader = reader;
-
-  const canvas = document.getElementById('camera-canvas');
-  const ctx    = canvas.getContext('2d');
-
-  function scan() {
-    if (!cameraStream) return;
-    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-      requestAnimationFrame(scan);
-      return;
-    }
-    canvas.width  = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
+  // Android Chrome等（BarcodeDetector対応）
+  if ('BarcodeDetector' in window) {
     try {
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const luminance = new ZXing.RGBLuminanceSource(imgData.data, canvas.width, canvas.height);
-      const binary    = new ZXing.HybridBinarizer(luminance);
-      const bmp       = new ZXing.BinaryBitmap(binary);
-      const result    = reader.decode(bmp);
-      if (result) {
-        document.getElementById('qr-url-input').value = result.getText();
-        window.previewQr();
-        closeCamera();
-        return;
-      }
-    } catch(e) {
-      // 読み取れなかった場合は次フレームへ
-    }
-    requestAnimationFrame(scan);
+      const bd = new BarcodeDetector({ formats: ['qr_code'] });
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      const video = document.getElementById('camera-video');
+      video.srcObject = cameraStream;
+      document.getElementById('camera-modal').classList.add('open');
+      await video.play();
+      const canvas = document.getElementById('camera-canvas');
+      const ctx = canvas.getContext('2d');
+      scanTimer = setInterval(async () => {
+        if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        try {
+          const codes = await bd.detect(canvas);
+          if (codes.length > 0) {
+            document.getElementById('qr-url-input').value = codes[0].rawValue;
+            window.previewQr();
+            closeCamera();
+          }
+        } catch(e) {}
+      }, 500);
+      return;
+    } catch(e) {}
   }
-  requestAnimationFrame(scan);
-}
+  // iPhone Safari → ファイル選択でカメラ起動
+  document.getElementById('qr-file-input').click();
+};
 
 window.closeCamera = function() {
   if (cameraStream) {
     cameraStream.getTracks().forEach(t => t.stop());
     cameraStream = null;
   }
+  if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
   document.getElementById('camera-modal').classList.remove('open');
 };
 
-// iPhone用フォールバック（file input経由）は削除
+// iPhone：撮影した画像からCanvasでピクセルデータを取得しAPIで解析
+window.readQrFromFile = async function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
+  img.onload = async () => {
+    // まずBarcodeDetectorで試みる（対応端末）
+    if ('BarcodeDetector' in window) {
+      try {
+        const bd = new BarcodeDetector({ formats: ['qr_code'] });
+        const codes = await bd.detect(img);
+        if (codes.length > 0) {
+          document.getElementById('qr-url-input').value = codes[0].rawValue;
+          window.previewQr();
+          URL.revokeObjectURL(img.src);
+          return;
+        }
+      } catch(e) {}
+    }
+    // iPhoneはCanvasに描画してbase64でQR読み取りAPIに送信
+    const canvas = document.createElement('canvas');
+    const maxSize = 600;
+    const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+    canvas.width  = img.width  * scale;
+    canvas.height = img.height * scale;
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(img.src);
+
+    // zxing.appの無料APIで解析
+    canvas.toBlob(async (blob) => {
+      const formData = new FormData();
+      formData.append('file', blob, 'qr.jpg');
+      try {
+        const res = await fetch('https://api.qrserver.com/v1/read-qr-code/', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        const text = data?.[0]?.symbol?.[0]?.data;
+        if (text) {
+          document.getElementById('qr-url-input').value = text;
+          window.previewQr();
+        } else {
+          alert('QRコードを読み取れませんでした。
+もう少し近づけて撮影してみてください。');
+        }
+      } catch(e) {
+        alert('読み取りに失敗しました。URLを直接入力してください。');
+      }
+    }, 'image/jpeg', 0.9);
+  };
+};
 
 // ── QRコード ───────────────────────────────
 function renderQr(url) {
