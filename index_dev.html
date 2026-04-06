@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>すずかつオンライン【開発用】</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Oswald:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0f1923;
+    --sea: #003d5c;
+    --wave: #005f8a;
+    --foam: #e8f4f8;
+    --gold: #e8a020;
+    --gold-light: #ffd166;
+    --red: #c0392b;
+    --green: #1a7a4a;
+    --green-light: #27ae60;
+    --purple: #6c3db5;
+    --purple-light: #a478e8;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--ink);
+    color: var(--foam);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 80%, rgba(0,95,138,0.35) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(0,61,92,0.5) 0%, transparent 55%),
+      linear-gradient(160deg, #0f1923 0%, #0a2a3a 100%);
+    z-index: 0;
+  }
+
+  header {
+    position: relative; z-index: 10;
+    padding: 16px 18px 12px;
+    background: rgba(0,61,92,0.6);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(232,160,32,0.3);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .header-icon { font-size: 26px; }
+  .header-title { font-family: 'Oswald', sans-serif; font-size: 17px; letter-spacing: 0.05em; color: var(--gold-light); }
+  .header-sub { font-size: 10px; color: rgba(232,244,248,0.55); margin-top: 1px; }
+  .live-badge {
+    margin-left: auto;
+    background: var(--green); color: white;
+    font-size: 10px; font-weight: 700;
+    padding: 4px 10px; border-radius: 20px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .live-dot { width:7px; height:7px; background:#7fff7f; border-radius:50%; animation: blink 1.5s infinite; }
+  @keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
+
+  /* ── オープン状況バー ── */
+  #shop-status-bar {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    gap: 4px; padding: 16px 14px;
+    transition: background 0.4s;
+    border-bottom: 3px solid transparent;
+  }
+  #shop-status-bar.open  {
+    background: linear-gradient(135deg, rgba(26,122,74,0.6), rgba(26,122,74,0.3));
+    border-bottom-color: #5dcc8a;
+  }
+  #shop-status-bar.close {
+    background: linear-gradient(135deg, rgba(192,57,43,0.55), rgba(192,57,43,0.25));
+    border-bottom-color: #ff8888;
+  }
+  #shop-status-bar.unknown {
+    background: rgba(80,80,80,0.2);
+    border-bottom-color: transparent;
+  }
+  .shop-status-main {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .shop-status-icon { font-size: 32px; line-height: 1; }
+  .shop-status-label {
+    font-size: 22px; font-weight: 900;
+    letter-spacing: 0.06em;
+  }
+  #shop-status-bar.open  .shop-status-label { color: #ffffff; text-shadow: 0 0 12px rgba(93,204,138,0.8); }
+  #shop-status-bar.close .shop-status-label { color: #ffffff; text-shadow: 0 0 12px rgba(255,136,136,0.8); }
+  #shop-status-bar.unknown .shop-status-label { color: rgba(232,244,248,0.4); }
+  .shop-status-sub {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  }
+  #shop-status-bar.open  .shop-status-sub { color: rgba(93,204,138,0.8); }
+  #shop-status-bar.close .shop-status-sub { color: rgba(255,136,136,0.8); }
+  #shop-status-bar.unknown .shop-status-sub { color: rgba(232,244,248,0.3); }
+  .shop-status-dot { display:none; }
+
+  #sync-bar {
+    position: relative; z-index: 10;
+    padding: 5px 14px;
+    font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; gap: 6px;
+    transition: background 0.3s;
+  }
+  #sync-bar.syncing { background: rgba(232,160,32,0.15); color: var(--gold-light); }
+  #sync-bar.ok      { background: rgba(26,122,74,0.15);  color: #5dcc8a; }
+  #sync-bar.error   { background: rgba(192,57,43,0.2);   color: #ff8888; }
+  .sync-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+  .sync-dot.ok      { background:#5dcc8a; }
+  .sync-dot.syncing { background:var(--gold); animation:blink 0.8s infinite; }
+  .sync-dot.error   { background:#ff8888; }
+
+  .tabs {
+    position: relative; z-index: 10;
+    display: flex;
+    background: rgba(0,0,0,0.4);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .tab {
+    flex: 1; padding: 12px 6px;
+    text-align: center; font-size: 11px; font-weight: 700;
+    color: rgba(232,244,248,0.5);
+    cursor: pointer; border: none; background: none;
+    transition: all 0.2s; border-bottom: 3px solid transparent;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  .tab.active { color: var(--gold-light); border-bottom-color: var(--gold); background: rgba(232,160,32,0.08); }
+  .tab-icon { display:block; font-size:18px; margin-bottom:2px; }
+  .tab-wrapper { position:relative; display:inline-block; }
+  .tab-badge {
+    display:none;
+    position:absolute; top:-4px; right:-8px;
+    background:var(--red); color:#fff;
+    font-size:9px; font-weight:900;
+    min-width:16px; height:16px;
+    border-radius:20px; padding:0 4px;
+    text-align:center;
+    border:2px solid var(--ink);
+    display:none;
+    align-items:center; justify-content:center;
+  }
+  .tab-badge.visible { display:flex; }
+
+
+  .screen { display:none; position:relative; z-index:5; padding:14px; padding-bottom:30px; }
+  .screen.active { display:block; }
+
+  .card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: var(--radius);
+    padding: 18px; margin-bottom: 14px;
+  }
+  .card-title {
+    font-size: 11px; font-weight: 700;
+    color: rgba(232,244,248,0.5);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 13px;
+  }
+
+  .inp {
+    width: 100%; padding: 13px 14px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    color: var(--foam); font-size: 16px;
+    font-family: 'Noto Sans JP', sans-serif;
+    outline: none; margin-bottom: 10px;
+    transition: border 0.2s;
+  }
+  .inp:focus { border-color: var(--gold); }
+  .inp::placeholder { color: rgba(232,244,248,0.3); }
+  textarea.inp { resize: none; height: 88px; font-size: 14px; line-height: 1.6; }
+
+  .section-label {
+    font-size: 11px; font-weight: 700;
+    color: rgba(232,244,248,0.45);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .big-btn {
+    width: 100%; padding: 20px 14px;
+    border-radius: var(--radius); border: none;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 16px; font-weight: 900;
+    cursor: pointer; transition: transform 0.1s, box-shadow 0.1s;
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; letter-spacing: 0.03em;
+    margin-bottom: 10px;
+  }
+  .big-btn:last-child { margin-bottom: 0; }
+  .big-btn:active { transform: scale(0.97); }
+  .big-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-going  { background: linear-gradient(135deg,var(--green),#0fa85e); color:#fff; box-shadow:0 6px 20px rgba(26,122,74,0.4); }
+  .btn-catch  { background: linear-gradient(135deg,var(--gold),#f0b400); color:var(--ink); box-shadow:0 6px 20px rgba(232,160,32,0.45); }
+  .btn-rest   { background: linear-gradient(135deg,#4a4a6a,#2d2d45); color:rgba(232,244,248,0.85); box-shadow:0 4px 12px rgba(0,0,0,0.3); }
+  .btn-save   { background: linear-gradient(135deg,#0e6a7a,#0a4a58); color:#fff; box-shadow:0 5px 16px rgba(14,106,122,0.4); }
+  .btn-send   { background: linear-gradient(135deg,var(--purple),#8b5cf6); color:#fff; box-shadow:0 6px 20px rgba(108,61,181,0.45); }
+  .btn-danger { background: linear-gradient(135deg,#7a1515,#5a0e0e); color:#ffaaaa; box-shadow:0 4px 12px rgba(0,0,0,0.3); }
+  .btn-open   { background: linear-gradient(135deg,var(--green),#0fa85e); color:#fff; box-shadow:0 6px 20px rgba(26,122,74,0.4); font-size:18px; padding:22px 14px; }
+  .btn-close-shop { background: linear-gradient(135deg,#c0392b,#96281b); color:#fff; box-shadow:0 6px 20px rgba(192,57,43,0.4); font-size:18px; padding:22px 14px; }
+
+  .stock-toggle-row { display:flex; gap:8px; margin-bottom:12px; }
+  .stock-toggle {
+    flex:1; padding:14px 6px;
+    border-radius:12px; border:2px solid rgba(255,255,255,0.12);
+    background:rgba(255,255,255,0.05);
+    color:rgba(232,244,248,0.6);
+    font-size:14px; font-weight:700;
+    cursor:pointer; text-align:center;
+    font-family:'Noto Sans JP',sans-serif;
+    transition:all 0.2s;
+  }
+  .stock-toggle.active-yes { border-color:#4ade80; background:rgba(74,222,128,0.14); color:#4ade80; }
+  .stock-toggle.active-no  { border-color:#7777aa; background:rgba(119,119,170,0.14); color:#aaa; }
+
+  .stock-amount-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; }
+  .stock-amt-btn {
+    padding:13px 4px; border-radius:12px;
+    border:1px solid rgba(255,255,255,0.12);
+    background:rgba(255,255,255,0.05);
+    color:rgba(232,244,248,0.7); font-size:13px; font-weight:700;
+    cursor:pointer; text-align:center;
+    font-family:'Noto Sans JP',sans-serif;
+    transition:all 0.15s;
+  }
+  .stock-amt-btn.sel { border-color:#4ade80; background:rgba(74,222,128,0.16); color:#4ade80; }
+  .stock-section { display:none; }
+  .stock-section.visible { display:block; }
+
+  .my-status-row { padding:13px 14px; border-radius:12px; margin-bottom:8px; }
+  .my-status-top { display:flex; align-items:center; gap:10px; }
+  .status-going { background:rgba(26,122,74,0.2); border:1px solid rgba(26,122,74,0.4); }
+  .status-rest  { background:rgba(74,74,106,0.2); border:1px solid rgba(74,74,106,0.4); }
+  .status-catch { background:rgba(232,160,32,0.2); border:1px solid rgba(232,160,32,0.5); }
+  .status-dot-big { width:13px; height:13px; border-radius:50%; flex-shrink:0; }
+  .dot-going  { background:var(--green-light); box-shadow:0 0 8px var(--green-light); }
+  .dot-rest   { background:#7777aa; }
+  .dot-catch  { background:var(--gold); box-shadow:0 0 8px var(--gold); }
+  .dot-unknown{ background:#555; }
+  .time-row { text-align:center; font-size:10px; color:rgba(232,244,248,0.35); margin-top:5px; }
+
+  .fisher-list { display:flex; flex-direction:column; gap:8px; }
+  .fisher-item {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:13px 14px;
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:12px; transition:all 0.2s;
+  }
+  .fisher-item.has-catch { background:rgba(232,160,32,0.1); border-color:rgba(232,160,32,0.35); animation:glow 2s ease-in-out infinite; }
+  @keyframes glow { 0%,100%{box-shadow:none} 50%{box-shadow:0 0 14px rgba(232,160,32,0.28)} }
+  .fisher-item.has-stock { border-left:3px solid #4ade80; }
+  .fisher-avatar {
+    width:42px; height:42px; border-radius:50%;
+    background:var(--wave);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; flex-shrink:0; position:relative;
+  }
+  .fisher-status-dot { position:absolute; bottom:1px; right:1px; width:11px; height:11px; border-radius:50%; border:2px solid var(--ink); }
+  .fisher-info { flex:1; min-width:0; }
+  .fisher-name { font-size:14px; font-weight:700; }
+  .fisher-detail { font-size:11px; color:rgba(232,244,248,0.5); margin-top:2px; line-height:1.5; }
+  .fisher-badge { font-size:10px; font-weight:700; padding:3px 9px; border-radius:20px; flex-shrink:0; white-space:nowrap; }
+  .badge-going   { background:rgba(26,122,74,0.25); color:#5dcc8a; border:1px solid rgba(93,204,138,0.3); }
+  .badge-rest    { background:rgba(100,100,140,0.2); color:#8888bb; border:1px solid rgba(136,136,187,0.2); }
+  .badge-catch   { background:rgba(232,160,32,0.25); color:var(--gold); border:1px solid rgba(232,160,32,0.4); }
+  .badge-unknown { background:rgba(80,80,80,0.2); color:#666; border:1px solid rgba(100,100,100,0.2); }
+  .stock-tag {
+    display:inline-block; font-size:10px; font-weight:700;
+    padding:2px 8px; border-radius:20px; margin-top:5px;
+    background:rgba(74,222,128,0.14); color:#4ade80;
+    border:1px solid rgba(74,222,128,0.3);
+  }
+
+  .summary-bar { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:14px; }
+  .summary-cell { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 4px; text-align:center; }
+  .summary-num { font-family:'Oswald',sans-serif; font-size:24px; line-height:1; margin-bottom:3px; }
+  .num-going { color:var(--green-light); }
+  .num-catch { color:var(--gold); }
+  .num-rest  { color:#7777aa; }
+  .num-stock { color:#4ade80; }
+  .summary-label { font-size:9px; color:rgba(232,244,248,0.45); }
+
+  .shop-banner { border-radius:var(--radius); padding:16px 18px; margin-bottom:14px; display:flex; align-items:center; gap:12px; }
+  .banner-open  { background:linear-gradient(120deg,rgba(26,122,74,0.3),rgba(26,122,74,0.1)); border:1px solid rgba(26,122,74,0.5); }
+  .banner-close { background:linear-gradient(120deg,rgba(192,57,43,0.3),rgba(192,57,43,0.1)); border:1px solid rgba(192,57,43,0.4); }
+  .banner-icon  { font-size:30px; }
+  .banner-title { font-size:18px; font-weight:900; }
+  .banner-sub   { font-size:12px; color:rgba(232,244,248,0.65); margin-top:2px; }
+
+  .msg-board {
+    border-radius:var(--radius);
+    background:rgba(108,61,181,0.1);
+    border:1px solid rgba(164,120,232,0.3);
+    padding:16px; margin-bottom:14px;
+  }
+  .msg-board-header { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .msg-board-title  { font-size:13px; font-weight:700; color:var(--purple-light); }
+  .msg-board-badge  { font-size:10px; font-weight:700; background:var(--purple); color:#fff; padding:2px 8px; border-radius:20px; margin-left:auto; }
+  .msg-list { display:flex; flex-direction:column; gap:10px; }
+  .msg-item {
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(164,120,232,0.2);
+    border-radius:12px; padding:13px 14px;
+    border-left:3px solid var(--purple-light);
+    position:relative;
+  }
+  .msg-text { font-size:14px; line-height:1.7; color:var(--foam); }
+  .msg-meta { font-size:10px; color:rgba(232,244,248,0.4); margin-top:6px; }
+  .msg-empty { font-size:13px; color:rgba(232,244,248,0.35); text-align:center; padding:10px 0; }
+  .like-row {
+    display:flex; align-items:center; gap:8px;
+    margin-top:10px; padding-top:8px;
+    border-top:1px solid rgba(255,255,255,0.06);
+    flex-wrap:wrap;
+  }
+  .like-btn {
+    display:flex; align-items:center; gap:5px;
+    padding:5px 12px; border-radius:20px;
+    border:1px solid rgba(255,255,255,0.15);
+    background:rgba(255,255,255,0.05);
+    color:rgba(232,244,248,0.6);
+    font-size:12px; font-weight:700;
+    cursor:pointer; font-family:'Noto Sans JP',sans-serif;
+    transition:all 0.2s;
+  }
+  .like-btn.liked {
+    border-color:rgba(255,100,100,0.5);
+    background:rgba(255,100,100,0.12);
+    color:#ff8888;
+  }
+  .like-count { font-size:12px; font-weight:700; }
+  .like-names {
+    font-size:10px; color:rgba(232,244,248,0.4);
+    margin-left:2px;
+  }
+  .like-names-buyer {
+    font-size:11px; color:rgba(232,244,248,0.5);
+    margin-top:6px; line-height:1.6; width:100%;
+  }
+
+  .msg-delete-btn {
+    position:absolute; top:8px; right:8px;
+    background:rgba(192,57,43,0.2); border:1px solid rgba(192,57,43,0.3);
+    color:#ff8888; font-size:10px; font-weight:700;
+    padding:2px 7px; border-radius:8px; cursor:pointer;
+  }
+
+  .modal-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,0.8);
+    z-index:100; align-items:flex-end; justify-content:center;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal-sheet {
+    background:#1a2a35; border-radius:24px 24px 0 0;
+    padding:26px 18px 40px; width:100%; max-width:480px;
+    border-top:1px solid rgba(232,160,32,0.3);
+    animation:slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .modal-title { font-size:17px; font-weight:900; margin-bottom:4px; }
+  .modal-sub   { font-size:12px; color:rgba(232,244,248,0.5); margin-bottom:18px; }
+  .amount-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-bottom:14px; }
+  .amount-btn {
+    padding:16px 4px; border:1px solid rgba(255,255,255,0.13);
+    border-radius:12px; background:rgba(255,255,255,0.06);
+    color:var(--foam); font-size:13px; font-weight:700;
+    cursor:pointer; font-family:'Noto Sans JP',sans-serif; transition:all 0.15s;
+  }
+  .amount-btn:active { background:rgba(232,160,32,0.22); border-color:var(--gold); color:var(--gold-light); }
+  .modal-cancel {
+    width:100%; padding:13px; border:1px solid rgba(255,255,255,0.13);
+    border-radius:12px; background:transparent;
+    color:rgba(232,244,248,0.55); font-size:15px;
+    cursor:pointer; font-family:'Noto Sans JP',sans-serif;
+  }
+
+  .notify-card { background:rgba(232,160,32,0.08); border:1px solid rgba(232,160,32,0.25); border-radius:var(--radius); padding:14px; margin-top:14px; }
+  .notify-title { font-size:12px; font-weight:700; color:var(--gold-light); margin-bottom:7px; }
+  .notify-msg   { font-size:11px; color:rgba(232,244,248,0.65); line-height:1.7; }
+
+  .reset-area { margin-top:18px; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px; }
+  .reset-label { font-size:10px; color:rgba(232,244,248,0.3); margin-bottom:8px; text-align:center; }
+
+  .qr-card-img {
+    display:flex; justify-content:center; margin:14px 0 8px;
+  }
+  .qr-card-img img {
+    width:200px; height:200px;
+    border-radius:12px;
+    border:3px solid rgba(255,255,255,0.15);
+    background:#fff;
+  }
+  .qr-url-text {
+    font-size:11px; color:rgba(232,244,248,0.4);
+    text-align:center; word-break:break-all;
+    margin-bottom:10px; line-height:1.5;
+  }
+  .qr-empty {
+    text-align:center; padding:20px 0;
+    font-size:13px; color:rgba(232,244,248,0.3);
+  }
+
+  footer { position:relative; z-index:5; text-align:center; padding:16px; font-size:10px; color:rgba(232,244,248,0.2); }
+
+  /* ── パスワード画面 ── */
+  #pw-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,0.85);
+    z-index:150; align-items:center; justify-content:center;
+  }
+  #pw-overlay.open { display:flex; }
+  .pw-sheet {
+    background:#1a2a35; border-radius:24px;
+    padding:30px 22px 28px; width:88%; max-width:360px;
+    border:1px solid rgba(232,160,32,0.3);
+  }
+  .pw-title { font-size:18px; font-weight:900; text-align:center; margin-bottom:4px; }
+  .pw-sub   { font-size:12px; color:rgba(232,244,248,0.45); text-align:center; margin-bottom:20px; }
+  .pw-inp {
+    width:100%; padding:14px;
+    background:rgba(255,255,255,0.07);
+    border:1px solid rgba(255,255,255,0.15);
+    border-radius:12px; color:var(--foam);
+    font-size:20px; font-family:'Noto Sans JP',sans-serif;
+    text-align:center; letter-spacing:0.3em;
+    outline:none; margin-bottom:12px;
+    transition:border 0.2s;
+  }
+  .pw-inp:focus { border-color:var(--gold); }
+  .pw-error { font-size:12px; color:#ff8888; text-align:center; margin-bottom:10px; min-height:18px; }
+  .pw-cancel {
+    width:100%; padding:11px; border:1px solid rgba(255,255,255,0.13);
+    border-radius:12px; background:transparent;
+    color:rgba(232,244,248,0.45); font-size:14px;
+    cursor:pointer; font-family:'Noto Sans JP',sans-serif;
+    margin-top:4px;
+  }
+
+  /* パスワード変更カード */
+  .pw-change-card {
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:12px; padding:14px; margin-top:10px;
+  }
+  .pw-change-title { font-size:12px; font-weight:700; color:rgba(232,244,248,0.45); margin-bottom:10px; }
+  .pw-change-row { display:flex; flex-direction:column; gap:8px; }
+  .pw-change-inp {
+    width:100%; padding:13px 12px;
+    background:rgba(255,255,255,0.07);
+    border:1px solid rgba(255,255,255,0.15);
+    border-radius:10px; color:var(--foam);
+    font-size:15px; font-family:'Noto Sans JP',sans-serif;
+    outline:none; transition:border 0.2s;
+  }
+  .pw-change-inp:focus { border-color:var(--gold); }
+  .pw-change-btn {
+    width:100%; padding:13px; border-radius:10px; border:none;
+    background:linear-gradient(135deg,#0e6a7a,#0a4a58);
+    color:#fff; font-size:14px; font-weight:700;
+    cursor:pointer; font-family:'Noto Sans JP',sans-serif;
+  }
+
+  #loading-overlay {
+    position:fixed; inset:0; background:var(--ink);
+    z-index:200; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px;
+  }
+  .loading-fish { font-size:40px; animation:swim 1s ease-in-out infinite alternate; }
+  @keyframes swim { from{transform:translateX(-8px)} to{transform:translateX(8px)} }
+  .loading-text { font-size:13px; color:rgba(232,244,248,0.5); }
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="loading-fish">🐟</div>
+  <div class="loading-text">Firebaseに接続中…</div>
+</div>
+
+<header>
+  <span class="header-icon">🐟</span>
+  <div>
+    <div class="header-title">すずかつオンライン</div>
+    <div class="header-sub">漁師 ↔ 仲買　リアルタイム連絡</div>
+  </div>
+  <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+</header>
+
+<!-- オープン状況バー（全タブ共通） -->
+<div id="shop-status-bar" class="unknown">
+  <div class="shop-status-main">
+    <span class="shop-status-icon" id="shop-status-icon">⏳</span>
+    <span class="shop-status-label" id="shop-status-text">接続中…</span>
+  </div>
+  <div class="shop-status-sub" id="shop-status-sub"></div>
+</div>
+
+<div id="sync-bar" class="ok">
+  <div class="sync-dot ok" id="sync-dot"></div>
+  <span id="sync-text">接続済み</span>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('fisher')" id="tab-fisher">
+    <span class="tab-icon">🎣</span>漁師
+  </button>
+  <button class="tab" onclick="switchTab('buyer')" id="tab-buyer">
+    <span class="tab-icon">🏪</span>仲買
+  </button>
+  <button class="tab" onclick="switchTab('board')" id="tab-board">
+    <span class="tab-wrapper"><span class="tab-icon">📋</span><span class="tab-badge" id="board-tab-badge"></span></span>掲示板
+  </button>
+</div>
+
+<!-- 漁師画面 -->
+<div class="screen active" id="screen-fisher">
+  <div class="section-label" style="margin-top:4px;">あなたの名前</div>
+  <input class="inp" id="fisher-name" placeholder="例：田中　太郎" oninput="updateFisherName()" />
+
+  <div class="card">
+    <div class="card-title">🌊 今夜の出漁状況を送信</div>
+    <button class="big-btn btn-going" onclick="setFisherStatus('going')">🚤 出漁中・これから行く</button>
+    <button class="big-btn btn-catch" onclick="openCatchModal()">✨ 獲れた！今日中に持っていく</button>
+    <button class="big-btn btn-rest"  onclick="setFisherStatus('rest')">🏠 今日は終わり・帰宅</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🏠 自宅のウナギ在庫を登録</div>
+    <div class="section-label">自宅にウナギはありますか？</div>
+    <div class="stock-toggle-row">
+      <button class="stock-toggle" id="stock-yes" onclick="setStockHave(true)">🐟 ある</button>
+      <button class="stock-toggle" id="stock-no"  onclick="setStockHave(false)">❌ ない</button>
+    </div>
+    <div class="stock-section" id="stock-amount-section">
+      <div class="section-label">おおよその量</div>
+      <div class="stock-amount-row">
+        <button class="stock-amt-btn" data-val="少量 (〜50g)"    onclick="setStockAmt(this)">少量<br><small style="font-weight:400">〜50g</small></button>
+        <button class="stock-amt-btn" data-val="中量 (50〜100g)" onclick="setStockAmt(this)">中量<br><small style="font-weight:400">50〜100g</small></button>
+        <button class="stock-amt-btn" data-val="多量 (100g〜)"   onclick="setStockAmt(this)">多量<br><small style="font-weight:400">100g〜</small></button>
+      </div>
+    </div>
+    <div class="stock-section" id="stock-note-section">
+      <input class="inp" id="stock-note" placeholder="メモ（例：元気に泳いでいる、少し弱っている…）" style="margin-bottom:0;" />
+    </div>
+    <button class="big-btn btn-save" onclick="saveStock()" style="margin-top:12px;">💾 在庫情報を保存</button>
+    <div class="time-row" id="stock-save-time"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📡 送信済みステータス</div>
+    <div id="my-status-display">
+      <div style="color:rgba(232,244,248,0.35);font-size:13px;text-align:center;padding:8px 0;">
+        上のボタンで状況を送信してください
+      </div>
+    </div>
+    <div class="time-row" id="my-update-time"></div>
+  </div>
+
+  <div class="msg-board">
+    <div class="msg-board-header">
+      <span style="font-size:20px;">📢</span>
+      <div class="msg-board-title">仲買からのお知らせ</div>
+      <span class="msg-board-badge" id="fisher-msg-count">0件</span>
+    </div>
+    <div class="msg-list" id="fisher-msg-list">
+      <div class="msg-empty">まだメッセージはありません</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">📱 トレーサビリティ QRコード</div>
+    <div class="section-label">あなたのQRコードURL</div>
+    <input class="inp" id="qr-url-input" placeholder="https://example.com/trace/..." oninput="previewQr()" />
+    <button class="big-btn btn-save" onclick="saveQrUrl()" style="margin-bottom:0;">💾 QRコードを保存する</button>
+    <div id="qr-display" style="margin-top:4px;">
+      <div class="qr-empty">URLを入力してください</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 仲買画面 -->
+<div class="screen" id="screen-buyer">
+  <div class="summary-bar">
+    <div class="summary-cell"><div class="summary-num num-going" id="cnt-going">0</div><div class="summary-label">出漁中</div></div>
+    <div class="summary-cell"><div class="summary-num num-catch" id="cnt-catch">0</div><div class="summary-label">持込予定</div></div>
+    <div class="summary-cell"><div class="summary-num num-rest"  id="cnt-rest">0</div><div class="summary-label">帰宅済み</div></div>
+    <div class="summary-cell"><div class="summary-num num-stock" id="cnt-stock">0</div><div class="summary-label">在庫あり</div></div>
+  </div>
+
+  <!-- オープン切り替えカード -->
+  <div class="card">
+    <div class="card-title">🏪 店のオープン状況を切り替え</div>
+    <button class="big-btn btn-open"       onclick="setShopStatus('open')">🟢 開店する</button>
+    <button class="big-btn btn-close-shop" onclick="setShopStatus('close')">🔴 閉店する</button>
+  </div>
+
+  <div class="shop-banner" id="shop-banner">
+    <div class="banner-icon" id="banner-icon">⏳</div>
+    <div>
+      <div class="banner-title" id="banner-title">接続中…</div>
+      <div class="banner-sub"   id="banner-sub"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📨 漁師全員へメッセージ送信</div>
+    <textarea class="inp" id="buyer-msg-input" placeholder="例：本日22時〜受付します。持込の方は事前に電話ください！"></textarea>
+    <button class="big-btn btn-send" onclick="sendBuyerMsg()">📨 全員に送信する</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">👥 漁師一覧（全<span id="total-count">0</span>名）</div>
+    <div class="fisher-list" id="fisher-list-el">
+      <div style="color:rgba(232,244,248,0.35);font-size:13px;text-align:center;padding:14px 0;">
+        漁師がステータスを送信すると表示されます
+      </div>
+    </div>
+  </div>
+
+  <div class="notify-card">
+    <div class="notify-title">📌 開閉の判断目安</div>
+    <div class="notify-msg">
+      ✨ 持込予定が1名以上 → <strong style="color:#7fff7f;">開店推奨</strong><br>
+      🏠 在庫ありが1名以上（出漁なし）→ <strong style="color:#4ade80;">在庫引取り可</strong><br>
+      🚤 出漁中が3名以上 → <strong style="color:#ffd166;">待機推奨</strong><br>
+      全員帰宅＆在庫なし → <strong style="color:#ff8888;">閉店OK</strong>
+    </div>
+  </div>
+
+  <div class="msg-board">
+    <div class="msg-board-header">
+      <span style="font-size:20px;">📢</span>
+      <div class="msg-board-title">送信済みメッセージ（いいね確認）</div>
+      <span class="msg-board-badge" id="buyer-msg-count">0件</span>
+    </div>
+    <div class="msg-list" id="buyer-msg-list">
+      <div class="msg-empty">まだメッセージはありません</div>
+    </div>
+  </div>
+
+  <!-- パスワード変更 -->
+  <div class="card" style="margin-top:14px;">
+    <div class="card-title">🔐 パスワード変更</div>
+    <div class="pw-change-card">
+      <div class="pw-change-title">新しいパスワードを入力してください</div>
+      <div class="pw-change-row">
+        <input class="pw-change-inp" id="pw-new-input" type="password" placeholder="新パスワード" maxlength="20" />
+        <button class="pw-change-btn" onclick="changePassword()">変更</button>
+      </div>
+      <div class="pw-error" id="pw-change-error" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <div class="reset-area">
+    <div class="reset-label">⚠️ 管理者操作</div>
+    <button class="big-btn btn-danger" onclick="confirmReset()">🗑 全データをリセット（翌日準備用）</button>
+  </div>
+</div>
+
+<!-- 掲示板 -->
+<div class="screen" id="screen-board">
+  <div class="msg-board" style="border-color:rgba(164,120,232,0.4);">
+    <div class="msg-board-header">
+      <span style="font-size:22px;">📋</span>
+      <div class="msg-board-title" style="font-size:15px;">仲買からのお知らせ掲示板</div>
+      <span class="msg-board-badge" id="board-msg-count">0件</span>
+    </div>
+    <div class="msg-list" id="board-msg-list">
+      <div class="msg-empty">まだメッセージはありません</div>
+    </div>
+  </div>
+  <div style="font-size:11px;color:rgba(232,244,248,0.3);text-align:center;margin-top:10px;">
+    メッセージは仲買タブから送信できます
+  </div>
+</div>
+
+<!-- パスワード入力オーバーレイ -->
+<div id="pw-overlay">
+  <div class="pw-sheet">
+    <div class="pw-title">🔐 仲買タブ</div>
+    <div class="pw-sub">パスワードを入力してください</div>
+    <input class="pw-inp" id="pw-input" type="password" placeholder="••••" maxlength="20" />
+    <div class="pw-error" id="pw-error"></div>
+    <button class="big-btn btn-going" onclick="checkPassword()" style="margin-bottom:8px;">確認する</button>
+    <button class="pw-cancel" onclick="cancelPassword()">キャンセル</button>
+  </div>
+</div>
+
+<!-- 持込量モーダル -->
+<div class="modal-overlay" id="catch-modal">
+  <div class="modal-sheet">
+    <div class="modal-title">✨ 獲れた量はどのくらい？</div>
+    <div class="modal-sub">持ち込む予定の量を選んでください</div>
+    <div class="amount-grid">
+      <button class="amount-btn" onclick="selectCatchAmount('少量 (〜50g)')">少量<br><small>〜50g</small></button>
+      <button class="amount-btn" onclick="selectCatchAmount('中量 (50〜100g)')">中量<br><small>50〜100g</small></button>
+      <button class="amount-btn" onclick="selectCatchAmount('多量 (100g〜)')">多量<br><small>100g〜</small></button>
+    </div>
+    <button class="modal-cancel" onclick="closeModal()">キャンセル</button>
+  </div>
+</div>
+
+<footer>🐟 すずかつオンライン　v3.1　— 開発用 DEV —</footer>
+
+<script type="module">
+import { initializeApp }                          from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyAJghoVCbQi0tMT21xeqEnrbDUbUTBVs7E",
+  authDomain:        "suzukatsu-online-dev.firebaseapp.com",
+  databaseURL:       "https://suzukatsu-online-dev-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "suzukatsu-online-dev",
+  storageBucket:     "suzukatsu-online-dev.firebasestorage.app",
+  messagingSenderId: "609011457523",
+  appId:             "1:609011457523:web:77de0b825662bc235dc686"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+let fishers  = {};
+let currentPassword = '1234'; // デフォルトパスワード
+let messages = [];
+let myName   = '';
+let myStockHave = null;
+let myStockAmt  = '';
+let shopOpen = null; // null=不明, true=開店, false=閉店
+
+// ── 同期バー ───────────────────────────────
+function setSyncStatus(status, text) {
+  const bar = document.getElementById('sync-bar');
+  const dot = document.getElementById('sync-dot');
+  bar.className = status;
+  dot.className = 'sync-dot ' + (status === 'syncing' ? 'syncing' : status === 'error' ? 'error' : 'ok');
+  document.getElementById('sync-text').textContent = text;
+}
+
+// ── オープン状況バー更新 ───────────────────
+function renderShopStatusBar() {
+  const bar  = document.getElementById('shop-status-bar');
+  const icon = document.getElementById('shop-status-icon');
+  const text = document.getElementById('shop-status-text');
+  const sub  = document.getElementById('shop-status-sub');
+  if (shopOpen === true) {
+    bar.className    = 'open';
+    icon.textContent = '🟢';
+    text.textContent = '開　店　中';
+    sub.textContent  = '現在受付しています';
+  } else if (shopOpen === false) {
+    bar.className    = 'close';
+    icon.textContent = '🔴';
+    text.textContent = '閉　店　中';
+    sub.textContent  = '本日の受付は終了しました';
+  } else {
+    bar.className    = 'unknown';
+    icon.textContent = '⏳';
+    text.textContent = '状況未設定';
+    sub.textContent  = '';
+  }
+}
+
+// ── 仲買：オープン状況切り替え ─────────────
+window.setShopStatus = async function(status) {
+  setSyncStatus('syncing', '送信中…');
+  try {
+    await set(ref(db, 'shopStatus'), { open: status === 'open', updatedAt: Date.now() });
+    setSyncStatus('ok', '送信完了');
+  } catch(e) {
+    setSyncStatus('error', '送信失敗');
+    alert('送信に失敗しました：' + e.message);
+  }
+};
+
+// ── utils ──────────────────────────────────
+function fmtTime(ts) {
+  if (!ts) return '未報告';
+  const diff = Math.floor((Date.now() - ts) / 60000);
+  if (diff < 1)  return 'たった今';
+  if (diff < 60) return diff + '分前';
+  return Math.floor(diff / 60) + '時間前';
+}
+function fmtFull(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return (d.getMonth()+1) + '/' + d.getDate() + ' ' +
+    String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+function requireName() {
+  if (myName) return true;
+  const el = document.getElementById('fisher-name');
+  el.focus(); el.style.borderColor = 'var(--red)';
+  setTimeout(() => el.style.borderColor = '', 1800);
+  alert('先に名前を入力してください');
+  return false;
+}
+function safeKey(name) {
+  return name.replace(/[.#$\/\[\]]/g, '_');
+}
+
+// ── タブ切替 ───────────────────────────────
+window.switchTab = function(tab) {
+  if (tab === 'buyer') {
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-error').textContent = '';
+    document.getElementById('pw-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('pw-input').focus(), 100);
+    return;
+  }
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('screen-' + tab).classList.add('active');
+  document.getElementById('tab-'    + tab).classList.add('active');
+  if (tab === 'board') {
+    renderMessages(false);
+    document.getElementById('board-tab-badge').classList.remove('visible');
+  }
+};
+// ── パスワード関連 ─────────────────────────
+onValue(ref(db, 'buyerPassword'), snapshot => {
+  const val = snapshot.val();
+  if (val && val.password) currentPassword = val.password;
+});
+
+window.checkPassword = function() {
+  const input = document.getElementById('pw-input').value;
+  if (input === currentPassword) {
+    document.getElementById('pw-overlay').classList.remove('open');
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-error').textContent = '';
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('screen-buyer').classList.add('active');
+    document.getElementById('tab-buyer').classList.add('active');
+    renderBuyer();
+  } else {
+    document.getElementById('pw-error').textContent = '❌ パスワードが違います';
+    document.getElementById('pw-input').value = '';
+  }
+};
+
+window.cancelPassword = function() {
+  document.getElementById('pw-overlay').classList.remove('open');
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-error').textContent = '';
+};
+
+window.changePassword = async function() {
+  const newPw = document.getElementById('pw-new-input').value.trim();
+  const errEl = document.getElementById('pw-change-error');
+  if (!newPw) { errEl.textContent = '❌ パスワードを入力してください'; return; }
+  if (newPw.length < 4) { errEl.textContent = '❌ 4文字以上で設定してください'; return; }
+  setSyncStatus('syncing', '保存中…');
+  try {
+    await set(ref(db, 'buyerPassword'), { password: newPw });
+    document.getElementById('pw-new-input').value = '';
+    errEl.style.color = '#5dcc8a';
+    errEl.textContent = '✅ パスワードを変更しました';
+    setTimeout(() => { errEl.textContent = ''; errEl.style.color = '#ff8888'; }, 3000);
+    setSyncStatus('ok', '保存完了');
+  } catch(e) {
+    errEl.textContent = '❌ 保存に失敗しました';
+    setSyncStatus('error', '保存失敗');
+  }
+};
+
+
+// ── 名前 ───────────────────────────────────
+window.updateFisherName = function() {
+  myName = document.getElementById('fisher-name').value.trim();
+  localStorage.setItem('shirasu-myname', myName);
+  restoreMyStockUI();
+  renderMyStatus();
+};
+
+function restoreMyStockUI() {
+  if (!myName) return;
+  const me = fishers[safeKey(myName)];
+  if (!me) return;
+  if (me.stockHave != null) {
+    setStockHave(me.stockHave);
+    if (me.stockHave && me.stockAmt) {
+      document.querySelectorAll('.stock-amt-btn').forEach(b => {
+        b.classList.toggle('sel', b.dataset.val === me.stockAmt);
+      });
+      myStockAmt = me.stockAmt;
+    }
+    if (me.stockNote) document.getElementById('stock-note').value = me.stockNote;
+  }
+  if (me.stockUpdatedAt)
+    document.getElementById('stock-save-time').textContent = '最終保存：' + fmtTime(me.stockUpdatedAt);
+  // QRコードを復元
+  if (me.qrUrl) {
+    const inp = document.getElementById('qr-url-input');
+    if (inp) inp.value = me.qrUrl;
+    renderQr(me.qrUrl);
+  }
+}
+
+// ── 漁師ステータス ─────────────────────────
+window.setFisherStatus = async function(status, catchAmount) {
+  if (!requireName()) return;
+  catchAmount = catchAmount || '';
+  const key = safeKey(myName);
+  const existing = fishers[key] || {};
+  const data = { ...existing, name: myName, status, catchAmount, updatedAt: Date.now() };
+  setSyncStatus('syncing', '送信中…');
+  try {
+    await set(ref(db, 'fishers/' + key), data);
+    setSyncStatus('ok', '送信完了');
+  } catch(e) {
+    setSyncStatus('error', '送信失敗');
+    alert('送信に失敗しました：' + e.message);
+  }
+};
+
+function renderMyStatus() {
+  const key = safeKey(myName);
+  const s = fishers[key];
+  if (!s || !s.updatedAt) return;
+  const map = {
+    going: { cls:'status-going', dot:'dot-going', label:'🚤 出漁中・向かっています' },
+    catch: { cls:'status-catch', dot:'dot-catch', label:'✨ 獲れた！持込予定' },
+    rest:  { cls:'status-rest',  dot:'dot-rest',  label:'🏠 帰宅・本日終了' },
+  };
+  const m = map[s.status] || map.rest;
+  document.getElementById('my-status-display').innerHTML = `
+    <div class="my-status-row ${m.cls}">
+      <div class="my-status-top">
+        <div class="status-dot-big ${m.dot}"></div>
+        <div style="font-size:15px;font-weight:700;">${m.label}</div>
+      </div>
+      ${s.catchAmount ? `<div style="font-size:12px;color:var(--gold);margin-top:6px;padding-left:22px;">持込量：${esc(s.catchAmount)}</div>` : ''}
+    </div>
+  `;
+  document.getElementById('my-update-time').textContent = '送信：' + fmtTime(s.updatedAt);
+}
+
+// ── 在庫 ───────────────────────────────────
+window.setStockHave = function(val) {
+  myStockHave = val;
+  document.getElementById('stock-yes').className = 'stock-toggle' + (val  ? ' active-yes' : '');
+  document.getElementById('stock-no').className  = 'stock-toggle' + (!val ? ' active-no'  : '');
+  document.getElementById('stock-amount-section').className = 'stock-section' + (val ? ' visible' : '');
+  document.getElementById('stock-note-section').className   = 'stock-section visible';
+  if (!val) {
+    myStockAmt = '';
+    document.querySelectorAll('.stock-amt-btn').forEach(b => b.classList.remove('sel'));
+  }
+};
+window.setStockAmt = function(btn) {
+  myStockAmt = btn.dataset.val;
+  document.querySelectorAll('.stock-amt-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+};
+window.saveStock = async function() {
+  if (!requireName()) return;
+  if (myStockHave === null) { alert('在庫の有無を選択してください'); return; }
+  const note = document.getElementById('stock-note').value.trim();
+  const key = safeKey(myName);
+  const existing = fishers[key] || {};
+  const data = {
+    ...existing,
+    name: myName,
+    stockHave: myStockHave,
+    stockAmt:  myStockHave ? myStockAmt : '',
+    stockNote: note,
+    stockUpdatedAt: Date.now(),
+    status: existing.status || 'unknown',
+  };
+  setSyncStatus('syncing', '保存中…');
+  try {
+    await set(ref(db, 'fishers/' + key), data);
+    document.getElementById('stock-save-time').textContent = '保存しました：' + fmtTime(Date.now());
+    setSyncStatus('ok', '保存完了');
+  } catch(e) {
+    setSyncStatus('error', '保存失敗');
+    alert('保存に失敗しました：' + e.message);
+  }
+};
+
+// ── メッセージ送信 ─────────────────────────
+window.sendBuyerMsg = async function() {
+  const txt = document.getElementById('buyer-msg-input').value.trim();
+  if (!txt) return;
+  const id = Date.now();
+  setSyncStatus('syncing', '送信中…');
+  try {
+    await set(ref(db, 'messages/' + id), { text: txt, sentAt: id, id });
+    document.getElementById('buyer-msg-input').value = '';
+    setSyncStatus('ok', '送信完了');
+  } catch(e) {
+    setSyncStatus('error', '送信失敗');
+    alert('送信に失敗しました：' + e.message);
+  }
+};
+
+window.deleteMsg = async function(id) {
+  if (!confirm('このメッセージを削除しますか？')) return;
+  try {
+    await remove(ref(db, 'messages/' + id));
+  } catch(e) {
+    alert('削除に失敗しました：' + e.message);
+  }
+};
+
+// ── メッセージ表示 ─────────────────────────
+function renderMessages(isBuyer) {
+  const sorted = [...messages].sort((a,b) => b.sentAt - a.sentAt);
+  const count  = sorted.length;
+
+  const makeHtml = (m, asBuyer) => {
+    const likes = m.likes || {};
+    const likeNames = Object.values(likes);
+    const likeCount = likeNames.length;
+    const myLiked = myName && likes[safeKey(myName)];
+
+    const likeBtn = asBuyer
+      ? '' // 仲買はいいね不可
+      : `<button class="like-btn ${myLiked ? 'liked' : ''}" onclick="toggleLike(${m.id})">
+          👍
+        </button>`;
+
+    const likeNamesHtml = asBuyer && likeCount > 0
+      ? `<div class="like-names-buyer">👍 ${likeNames.map(n => esc(n)).join('　')}</div>`
+      : '';
+
+    return `
+      <div class="msg-item">
+        <div class="msg-text">${esc(m.text)}</div>
+        <div class="msg-meta">🏪 仲買より　${fmtFull(m.sentAt)}（${fmtTime(m.sentAt)}）</div>
+        ${asBuyer ? `<button class="msg-delete-btn" onclick="deleteMsg(${m.id})">削除</button>` : ''}
+        <div class="like-row">
+          ${likeBtn}
+          ${likeNamesHtml}
+        </div>
+      </div>
+    `;
+  };
+
+  const html = count === 0
+    ? '<div class="msg-empty">まだメッセージはありません</div>'
+    : sorted.map(m => makeHtml(m, isBuyer)).join('');
+
+  const htmlFisher = count === 0
+    ? '<div class="msg-empty">まだメッセージはありません</div>'
+    : sorted.map(m => makeHtml(m, false)).join('');
+
+  document.getElementById('fisher-msg-list').innerHTML = htmlFisher;
+  document.getElementById('board-msg-list').innerHTML  = isBuyer ? html : htmlFisher;
+  document.getElementById('fisher-msg-count').textContent = count + '件';
+  document.getElementById('board-msg-count').textContent  = count + '件';
+
+  // 掲示板タブのバッジ更新
+  const badge = document.getElementById('board-tab-badge');
+  const isBoard = document.getElementById('screen-board').classList.contains('active');
+  if (count > 0 && !isBoard) {
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.classList.add('visible');
+  } else {
+    badge.classList.remove('visible');
+  }
+}
+
+// いいねトグル
+window.toggleLike = async function(msgId) {
+  if (!requireName()) return;
+  const key = safeKey(myName);
+  const msg = messages.find(m => m.id === msgId);
+  if (!msg) return;
+  const likes = msg.likes || {};
+  const likeRef = ref(db, 'messages/' + msgId + '/likes/' + key);
+  setSyncStatus('syncing', '送信中…');
+  try {
+    if (likes[key]) {
+      await remove(likeRef);
+    } else {
+      await set(likeRef, myName);
+    }
+    setSyncStatus('ok', '送信完了');
+  } catch(e) {
+    setSyncStatus('error', '送信失敗');
+  }
+};
+
+// ── 仲買画面 ───────────────────────────────
+function renderBuyer() {
+  const list      = Object.values(fishers);
+  const cntGoing  = list.filter(f => f.status==='going').length;
+  const cntCatch  = list.filter(f => f.status==='catch').length;
+  const cntRest   = list.filter(f => f.status==='rest').length;
+  const cntStock  = list.filter(f => f.stockHave===true).length;
+  const cntUnknown= list.filter(f => f.status==='unknown').length;
+
+  document.getElementById('cnt-going').textContent = cntGoing;
+  document.getElementById('cnt-catch').textContent = cntCatch;
+  document.getElementById('cnt-rest').textContent  = cntRest;
+  document.getElementById('cnt-stock').textContent = cntStock;
+  document.getElementById('total-count').textContent = list.length;
+
+  const icon  = document.getElementById('banner-icon');
+  const title = document.getElementById('banner-title');
+  const sub   = document.getElementById('banner-sub');
+  const banner= document.getElementById('shop-banner');
+
+  if (cntCatch > 0) {
+    banner.className = 'shop-banner banner-open';
+    icon.textContent = '🏪'; title.textContent = '開店してください！';
+    sub.textContent  = `✨ ${cntCatch}名が持ち込み予定です`;
+  } else if (cntStock > 0 && cntGoing === 0) {
+    banner.className = 'shop-banner banner-open';
+    icon.textContent = '🏠'; title.textContent = '在庫引取りができます';
+    sub.textContent  = `🐟 ${cntStock}名が自宅にウナギを持っています`;
+  } else if (cntGoing >= 3) {
+    banner.className = 'shop-banner banner-open';
+    icon.textContent = '⏳'; title.textContent = '待機してください';
+    sub.textContent  = `🚤 ${cntGoing}名が出漁中。もうすぐ戻ります`;
+  } else if (cntGoing > 0) {
+    banner.className = 'shop-banner banner-open';
+    icon.textContent = '🤔'; title.textContent = `出漁中${cntGoing}名・要判断`;
+    sub.textContent  = '少人数ですが出漁中です';
+  } else if (cntUnknown > 0) {
+    banner.className = 'shop-banner banner-open';
+    icon.textContent = '❓'; title.textContent = `未報告 ${cntUnknown}名あり`;
+    sub.textContent  = '全員の確認が取れていません';
+  } else if (list.length === 0) {
+    banner.className = 'shop-banner banner-close';
+    icon.textContent = '🔒'; title.textContent = 'まだ誰も登録していません';
+    sub.textContent  = '漁師がステータスを送信すると表示されます';
+  } else {
+    banner.className = 'shop-banner banner-close';
+    icon.textContent = '🔒'; title.textContent = '閉店して大丈夫です';
+    sub.textContent  = '全員帰宅・在庫なし・出漁なし';
+  }
+
+  const badgeMap = {
+    going:   { cls:'badge-going',   label:'🚤 出漁中' },
+    catch:   { cls:'badge-catch',   label:'✨ 持込予定' },
+    rest:    { cls:'badge-rest',    label:'🏠 帰宅済み' },
+    unknown: { cls:'badge-unknown', label:'❓ 未報告' },
+  };
+  const dotMap = { catch:'dot-catch', going:'dot-going', rest:'dot-rest', unknown:'dot-unknown' };
+
+  const sorted = [...list].sort((a,b) => {
+    const order = {catch:0, going:1, unknown:2, rest:3};
+    return (order[a.status]||9) - (order[b.status]||9);
+  });
+
+  if (sorted.length === 0) {
+    document.getElementById('fisher-list-el').innerHTML =
+      '<div style="color:rgba(232,244,248,0.35);font-size:13px;text-align:center;padding:14px 0;">漁師がステータスを送信すると表示されます</div>';
+    return;
+  }
+
+  document.getElementById('fisher-list-el').innerHTML = sorted.map(f => {
+    const b       = badgeMap[f.status] || badgeMap.unknown;
+    const dotCls  = dotMap[f.status]   || 'dot-unknown';
+    const hasCatch = f.status === 'catch';
+    const hasStock = f.stockHave === true;
+    const hasNoStock = f.stockHave === false;
+    const stockTag = hasStock
+      ? `<span class="stock-tag">🏠 在庫あり${f.stockAmt ? '：'+esc(f.stockAmt) : ''}${f.stockNote ? ' ('+esc(f.stockNote)+')' : ''}</span>`
+      : hasNoStock
+        ? `<span class="stock-tag" style="background:rgba(119,119,170,0.14);color:#aaa;border-color:rgba(119,119,170,0.3);">❌ 在庫なし${f.stockNote ? '：'+esc(f.stockNote) : ''}</span>`
+        : '';
+    const parts = [];
+    if (f.catchAmount)    parts.push('📦 持込：' + esc(f.catchAmount));
+    if (f.updatedAt)      parts.push('更新：' + fmtTime(f.updatedAt));
+    else                  parts.push('未送信');
+    if (f.stockUpdatedAt) parts.push('在庫更新：' + fmtTime(f.stockUpdatedAt));
+
+    return `
+      <div class="fisher-item ${hasCatch?'has-catch':''} ${hasStock?'has-stock':''}">
+        <div class="fisher-avatar">🎣<div class="fisher-status-dot ${dotCls}"></div></div>
+        <div class="fisher-info">
+          <div class="fisher-name">${esc(f.name)}</div>
+          <div class="fisher-detail">${parts.join('　')}</div>
+          ${stockTag}
+        </div>
+        <span class="fisher-badge ${b.cls}">${b.label}</span>
+      </div>
+    `;
+  }).join('');
+
+  renderMessages(true);
+
+  // 仲買タブのメッセージ一覧（いいね確認用）
+  const sortedMsgs = [...messages].sort((a,b) => b.sentAt - a.sentAt);
+  const buyerMsgCount = sortedMsgs.length;
+  document.getElementById('buyer-msg-count').textContent = buyerMsgCount + '件';
+  document.getElementById('buyer-msg-list').innerHTML = buyerMsgCount === 0
+    ? '<div class="msg-empty">まだメッセージはありません</div>'
+    : sortedMsgs.map(m => {
+        const likes = m.likes || {};
+        const likeNames = Object.values(likes);
+        const likeCount = likeNames.length;
+        return `
+          <div class="msg-item">
+            <div class="msg-text">${esc(m.text)}</div>
+            <div class="msg-meta">🏪 仲買より　${fmtFull(m.sentAt)}（${fmtTime(m.sentAt)}）</div>
+            <button class="msg-delete-btn" onclick="deleteMsg(${m.id})">削除</button>
+            ${likeCount > 0
+              ? `<div class="like-names-buyer" style="margin-top:8px;">👍 ${likeNames.map(n => esc(n)).join('　')}</div>`
+              : `<div style="font-size:11px;color:rgba(232,244,248,0.25);margin-top:8px;">まだいいねなし</div>`
+            }
+          </div>
+        `;
+      }).join('');
+}
+
+// ── リセット ───────────────────────────────
+window.confirmReset = async function() {
+  if (!confirm('⚠️ 全データをリセットしますか？\n\n全端末に即時反映され、元に戻せません。\n翌日の操業前に実行してください。')) return;
+  setSyncStatus('syncing', 'リセット中…');
+  try {
+    await remove(ref(db, 'fishers'));
+    await remove(ref(db, 'messages'));
+    await remove(ref(db, 'shopStatus'));
+    setSyncStatus('ok', 'リセット完了');
+    alert('✅ リセット完了しました。');
+  } catch(e) {
+    setSyncStatus('error', 'リセット失敗');
+    alert('失敗しました：' + e.message);
+  }
+};
+
+// ── モーダル ───────────────────────────────
+window.openCatchModal = function() {
+  if (!requireName()) return;
+  document.getElementById('catch-modal').classList.add('open');
+};
+window.closeModal = function() {
+  document.getElementById('catch-modal').classList.remove('open');
+};
+window.selectCatchAmount = function(amt) {
+  closeModal();
+  window.setFisherStatus('catch', amt);
+};
+
+// ── QRコード ───────────────────────────────
+function renderQr(url) {
+  const display = document.getElementById('qr-display');
+  if (!display) return;
+  if (!url) {
+    display.innerHTML = '<div class="qr-empty">URLを入力してください</div>';
+    return;
+  }
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+  display.innerHTML = `
+    <div class="qr-card-img"><img src="${qrSrc}" alt="QRコード" /></div>
+    <div class="qr-url-text">${esc(url)}</div>
+  `;
+}
+
+window.previewQr = function() {
+  const url = document.getElementById('qr-url-input').value.trim();
+  renderQr(url);
+};
+
+window.saveQrUrl = async function() {
+  if (!requireName()) return;
+  const url = document.getElementById('qr-url-input').value.trim();
+  if (!url) { alert('URLを入力してください'); return; }
+  const key = safeKey(myName);
+  const existing = fishers[key] || {};
+  setSyncStatus('syncing', '保存中…');
+  try {
+    await set(ref(db, 'fishers/' + key), { ...existing, name: myName, qrUrl: url });
+    setSyncStatus('ok', '保存完了');
+    renderQr(url);
+  } catch(e) {
+    setSyncStatus('error', '保存失敗');
+    alert('保存に失敗しました：' + e.message);
+  }
+};
+
+// ── Firebase リアルタイムリスナー ──────────
+onValue(ref(db, 'fishers'), snapshot => {
+  fishers = snapshot.val() || {};
+  if (myName) { restoreMyStockUI(); renderMyStatus(); }
+  if (document.getElementById('screen-buyer').classList.contains('active')) renderBuyer();
+  setSyncStatus('ok', '接続済み');
+});
+
+onValue(ref(db, 'messages'), snapshot => {
+  const raw = snapshot.val() || {};
+  messages = Object.values(raw);
+  const isBuyer = document.getElementById('screen-buyer').classList.contains('active');
+  renderMessages(isBuyer);
+  setSyncStatus('ok', '接続済み');
+});
+
+// ── オープン状況リスナー ───────────────────
+onValue(ref(db, 'shopStatus'), snapshot => {
+  const val = snapshot.val();
+  if (val && val.open !== undefined) {
+    shopOpen = val.open;
+  } else {
+    shopOpen = null;
+  }
+  renderShopStatusBar();
+});
+
+// ── 起動 ───────────────────────────────────
+(function init() {
+  const saved = localStorage.getItem('shirasu-myname');
+  if (saved) {
+    myName = saved;
+    document.getElementById('fisher-name').value = saved;
+  }
+  onValue(ref(db, 'fishers'), () => {
+    document.getElementById('loading-overlay').style.display = 'none';
+    setSyncStatus('ok', '接続済み');
+  }, { onlyOnce: true });
+
+  setTimeout(() => {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay.style.display !== 'none') {
+      overlay.innerHTML = '<div style="font-size:28px;">⚠️</div><div class="loading-text" style="color:#ff8888;">Firebaseへの接続に失敗しました<br><small>ネットワークを確認してください</small></div>';
+    }
+  }, 5000);
+
+  setInterval(() => {
+    if (document.getElementById('screen-buyer').classList.contains('active')) renderBuyer();
+    if (myName) renderMyStatus();
+  }, 60000);
+})();
+</script>
+</body>
+</html>
