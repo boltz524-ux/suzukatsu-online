@@ -597,9 +597,12 @@
     <div id="qr-section-img" style="display:none;">
       <div class="section-label">QRコード画像を選択</div>
       <input type="file" id="qr-img-file" accept="image/*" style="display:none;" onchange="loadQrImage(this)" />
-      <button class="big-btn btn-save" onclick="document.getElementById('qr-img-file').click()" style="margin-bottom:10px;">📂 画像を選択する</button>
+      <button class="big-btn btn-save" onclick="document.getElementById('qr-img-file').click()" style="margin-bottom:10px;">📂 画像を選択・変更する</button>
       <div id="qr-img-preview"></div>
-      <button class="big-btn btn-rest" onclick="clearQrImage()" style="margin-top:8px;font-size:13px;" id="qr-img-clear-btn">🗑 画像をクリア</button>
+      <div style="display:flex;gap:8px;margin-top:8px;" id="qr-img-action-row">
+        <button class="big-btn btn-rest" onclick="clearQrImage()" style="margin-bottom:0;flex:0 0 56px;font-size:22px;padding:0;" id="qr-img-clear-btn">🗑</button>
+      </div>
+      <div style="font-size:10px;color:rgba(232,244,248,0.35);text-align:center;margin-top:6px;">📱 このスマホ内にのみ保存されます</div>
     </div>
     <div id="qr-display" style="margin-top:4px;">
       <div class="qr-empty">URLを入力してください</div>
@@ -737,13 +740,13 @@ import { initializeApp }                          from 'https://www.gstatic.com/
 import { getDatabase, ref, set, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 const firebaseConfig = {
-  apiKey:            "AIzaSyDqj4bd-JOGAKwU6L-QWCDRxeo3TbgXS5g",
-  authDomain:        "suzukatsu-online-6b4b2.firebaseapp.com",
-  databaseURL:       "https://suzukatsu-online-6b4b2-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:         "suzukatsu-online-6b4b2",
-  storageBucket:     "suzukatsu-online-6b4b2.firebasestorage.app",
-  messagingSenderId: "711186518219",
-  appId:             "1:711186518219:web:4dc133975361daca148b4e"
+  apiKey:            "AIzaSyAvjG8DbYAVZap6oJgwYxPBweQiASXbKBo",
+  authDomain:        "suzukatsu-online.firebaseapp.com",
+  databaseURL:       "https://suzukatsu-online-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "suzukatsu-online",
+  storageBucket:     "suzukatsu-online.firebasestorage.app",
+  messagingSenderId: "146867186909",
+  appId:             "1:146867186909:web:ab6127a95b393ebbabff34"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -922,13 +925,20 @@ function restoreMyStockUI() {
   }
   if (me.stockUpdatedAt)
     document.getElementById('stock-save-time').textContent = '最終保存：' + fmtTime(me.stockUpdatedAt);
-  // QRコードをlocalStorageから復元
+  // QRコード（URL）をlocalStorageから復元
   const qrKey = 'qr-url-' + safeKey(myName);
   const savedQrUrl = localStorage.getItem(qrKey);
   if (savedQrUrl) {
     const inp = document.getElementById('qr-url-input');
     if (inp) inp.value = savedQrUrl;
     renderQr(savedQrUrl);
+  }
+  // QRコード（画像）をlocalStorageから復元
+  const imgKey = 'qr-img-' + safeKey(myName);
+  const savedQrImg = localStorage.getItem(imgKey);
+  if (savedQrImg) {
+    // 画像モードに自動切り替え
+    setQrMode('img');
   }
 }
 
@@ -1309,13 +1319,13 @@ function loadSavedQrImage() {
   if (!key) return;
   const saved = localStorage.getItem(key);
   const preview = document.getElementById('qr-img-preview');
-  const clearBtn = document.getElementById('qr-img-clear-btn');
+  const actionRow = document.getElementById('qr-img-action-row');
   if (saved) {
     preview.innerHTML = `<div class="qr-card-img"><img src="${saved}" style="width:200px;height:200px;object-fit:contain;border-radius:12px;border:3px solid rgba(255,255,255,0.15);background:#fff;" /></div>`;
-    clearBtn.style.display = 'flex';
+    actionRow.style.display = 'flex';
   } else {
     preview.innerHTML = '<div class="qr-empty">画像が登録されていません</div>';
-    clearBtn.style.display = 'none';
+    actionRow.style.display = 'none';
   }
 }
 
@@ -1326,9 +1336,18 @@ window.loadQrImage = function(input) {
   const reader = new FileReader();
   reader.onload = (e) => {
     const dataUrl = e.target.result;
-    const key = 'qr-img-' + safeKey(myName);
-    localStorage.setItem(key, dataUrl);
-    loadSavedQrImage();
+    // localStorageに自動保存
+    try {
+      localStorage.setItem('qr-img-' + safeKey(myName), dataUrl);
+    } catch(err) {
+      alert('画像サイズが大きすぎて保存できませんでした。小さい画像を使用してください。');
+      return;
+    }
+    // 即プレビュー表示
+    const preview = document.getElementById('qr-img-preview');
+    const actionRow = document.getElementById('qr-img-action-row');
+    preview.innerHTML = `<div class="qr-card-img"><img src="${dataUrl}" style="width:200px;height:200px;object-fit:contain;border-radius:12px;border:3px solid rgba(255,255,255,0.15);background:#fff;" /></div>`;
+    actionRow.style.display = 'flex';
   };
   reader.readAsDataURL(file);
   input.value = '';
@@ -1404,9 +1423,20 @@ onValue(ref(db, 'shopStatus'), snapshot => {
   setTimeout(() => {
     const overlay = document.getElementById('loading-overlay');
     if (overlay.style.display !== 'none') {
-      overlay.innerHTML = '<div style="font-size:28px;">⚠️</div><div class="loading-text" style="color:#ff8888;">Firebaseへの接続に失敗しました<br><small>ネットワークを確認してください</small></div>';
+      overlay.innerHTML = `
+        <div style="font-size:36px;">⚠️</div>
+        <div class="loading-text" style="color:#ff8888;">Firebaseへの接続に失敗しました<br><small>ネットワークを確認してください</small></div>
+        <button onclick="location.reload()" style="
+          margin-top:16px; padding:14px 32px;
+          background:linear-gradient(135deg,#005f8a,#003d5c);
+          color:#fff; border:none; border-radius:12px;
+          font-size:15px; font-weight:700;
+          font-family:'Noto Sans JP',sans-serif;
+          cursor:pointer;
+        ">🔄 再接続する</button>
+      `;
     }
-  }, 5000);
+  }, 15000);
 
   setInterval(() => {
     if (document.getElementById('screen-buyer').classList.contains('active')) renderBuyer();
