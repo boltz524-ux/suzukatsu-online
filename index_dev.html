@@ -597,12 +597,9 @@
     <div id="qr-section-img" style="display:none;">
       <div class="section-label">QRコード画像を選択</div>
       <input type="file" id="qr-img-file" accept="image/*" style="display:none;" onchange="loadQrImage(this)" />
-      <button class="big-btn btn-save" onclick="document.getElementById('qr-img-file').click()" style="margin-bottom:10px;">📂 画像を選択・変更する</button>
+      <button class="big-btn btn-save" onclick="document.getElementById('qr-img-file').click()" style="margin-bottom:10px;">📂 画像を選択する</button>
       <div id="qr-img-preview"></div>
-      <div style="display:flex;gap:8px;margin-top:8px;" id="qr-img-action-row">
-        <button class="big-btn btn-rest" onclick="clearQrImage()" style="margin-bottom:0;flex:0 0 56px;font-size:22px;padding:0;" id="qr-img-clear-btn">🗑</button>
-      </div>
-      <div style="font-size:10px;color:rgba(232,244,248,0.35);text-align:center;margin-top:6px;">📱 このスマホ内にのみ保存されます</div>
+      <button class="big-btn btn-rest" onclick="clearQrImage()" style="margin-top:8px;font-size:13px;" id="qr-img-clear-btn">🗑 画像をクリア</button>
     </div>
     <div id="qr-display" style="margin-top:4px;">
       <div class="qr-empty">URLを入力してください</div>
@@ -1312,13 +1309,13 @@ function loadSavedQrImage() {
   if (!key) return;
   const saved = localStorage.getItem(key);
   const preview = document.getElementById('qr-img-preview');
-  const actionRow = document.getElementById('qr-img-action-row');
+  const clearBtn = document.getElementById('qr-img-clear-btn');
   if (saved) {
     preview.innerHTML = `<div class="qr-card-img"><img src="${saved}" style="width:200px;height:200px;object-fit:contain;border-radius:12px;border:3px solid rgba(255,255,255,0.15);background:#fff;" /></div>`;
-    actionRow.style.display = 'flex';
+    clearBtn.style.display = 'flex';
   } else {
     preview.innerHTML = '<div class="qr-empty">画像が登録されていません</div>';
-    actionRow.style.display = 'none';
+    clearBtn.style.display = 'none';
   }
 }
 
@@ -1329,14 +1326,8 @@ window.loadQrImage = function(input) {
   const reader = new FileReader();
   reader.onload = (e) => {
     const dataUrl = e.target.result;
-    // localStorageに自動保存
-    try {
-      localStorage.setItem('qr-img-' + safeKey(myName), dataUrl);
-    } catch(e) {
-      alert('画像サイズが大きすぎて保存できませんでした。
-小さい画像を使用してください。');
-      return;
-    }
+    const key = 'qr-img-' + safeKey(myName);
+    localStorage.setItem(key, dataUrl);
     loadSavedQrImage();
   };
   reader.readAsDataURL(file);
