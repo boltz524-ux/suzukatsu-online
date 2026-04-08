@@ -74,6 +74,7 @@
   .step.open   { border-left-color: #5dcc8a; }
   .step.close  { border-left-color: #ff8888; }
   .step.qr     { border-left-color: #ffd166; }
+  .step.pin    { border-left-color: #60a5fa; }
 
   .step-num {
     font-size: 11px; font-weight: 900;
@@ -88,6 +89,7 @@
   .step.open   .step-num { background: #5dcc8a; color: #0f1923; }
   .step.close  .step-num { background: #ff8888; color: #0f1923; }
   .step.qr     .step-num { background: #ffd166; color: #0f1923; }
+  .step.pin    .step-num { background: #60a5fa; color: #0f1923; }
 
   .step-text { font-size: 13px; line-height: 1.6; }
   .step-text strong { color: #ffd166; }
@@ -96,6 +98,7 @@
   .step.open   .step-text strong { color: #5dcc8a; }
   .step.close  .step-text strong { color: #ff8888; }
   .step.qr     .step-text strong { color: #ffd166; }
+  .step.pin    .step-text strong { color: #60a5fa; }
 
   .status-sample {
     border-radius: 10px;
@@ -178,13 +181,14 @@
   <div class="card-header">
     <span class="card-icon">1️⃣</span>
     <div>
-      <div class="card-title">名前を入力する</div>
-      <div class="card-sub">毎回同じ名前を使ってください</div>
+      <div class="card-title">名前とPINコードを入力する</div>
+      <div class="card-sub">毎回同じ名前・同じPINを使ってください</div>
     </div>
   </div>
   <div class="step-list">
     <div class="step"><div class="step-num">1</div><div class="step-text">「漁師」タブを開く</div></div>
-    <div class="step"><div class="step-num">2</div><div class="step-text"><strong>名前欄</strong>に自分の名前を入力する</div></div>
+    <div class="step pin"><div class="step-num">2</div><div class="step-text"><strong>名前</strong>を入力する</div></div>
+    <div class="step pin"><div class="step-num">3</div><div class="step-text">横の欄に<strong>4桁のPINコード</strong>を入力する<br><span style="font-size:11px;color:rgba(232,244,248,0.4);">※ 自分だけが知っている番号を設定してください</span></div></div>
   </div>
 </div>
 
@@ -224,7 +228,7 @@
     <span class="card-icon">4️⃣</span>
     <div>
       <div class="card-title">トレーサビリティQRコードを登録</div>
-      <div class="card-sub">漁師タブ一番下から登録・表示</div>
+      <div class="card-sub">漁師タブ一番下から登録・表示　📱このスマホ内にのみ保存</div>
     </div>
   </div>
   <div class="step-list">
@@ -234,7 +238,7 @@
     </div>
     <div class="step qr">
       <div class="step-num">🖼</div>
-      <div class="step-text"><strong>画像アップロード</strong>モード：撮影済みのQR画像をそのまま登録<br>端末に保存されて次回から自動表示</div>
+      <div class="step-text"><strong>画像アップロード</strong>モード：撮影済みのQR画像をそのまま登録<br>選択すると自動保存・次回から自動表示</div>
     </div>
   </div>
 </div>
@@ -263,8 +267,8 @@
 </div>
 
 <div class="note">
-  📌 ブックマークに追加しておくと便利です<br>
-  名前は毎回同じものを入力してください<br>
+  📌 ブックマークまたはホーム画面に追加しておくと便利です<br>
+  名前・PINコードは毎回同じものを入力してください<br>
   不明な点は仲買までご連絡ください
 </div>
 

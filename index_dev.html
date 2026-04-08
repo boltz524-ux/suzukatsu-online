@@ -958,8 +958,11 @@ window.updateFisherName = function() {
   myPin  = document.getElementById('fisher-pin').value.trim();
   localStorage.setItem('shirasu-myname', myName);
   localStorage.setItem('shirasu-mypin',  myPin);
-  restoreMyStockUI();
-  renderMyStatus();
+  // 名前とPINが両方揃ったときだけ復元
+  if (myName && myPin.length === 4) {
+    restoreMyStockUI();
+    renderMyStatus();
+  }
 };
 
 function restoreMyStockUI() {
@@ -1410,7 +1413,7 @@ window.saveQrUrl = function() {
 // ── Firebase リアルタイムリスナー ──────────
 onValue(ref(db, 'fishers'), snapshot => {
   fishers = snapshot.val() || {};
-  if (myName) { restoreMyStockUI(); renderMyStatus(); }
+  if (myName && myPin) { restoreMyStockUI(); renderMyStatus(); }
   if (document.getElementById('screen-buyer').classList.contains('active')) renderBuyer();
   setSyncStatus('ok', '接続済み');
 });
@@ -1445,6 +1448,10 @@ onValue(ref(db, 'shopStatus'), snapshot => {
   if (savedPin) {
     myPin = savedPin;
     document.getElementById('fisher-pin').value = savedPin;
+  }
+  // 起動時：名前とPINが両方揃っていれば復元
+  if (myName && myPin) {
+    restoreMyStockUI();
   }
 
   onValue(ref(db, 'fishers'), () => {
